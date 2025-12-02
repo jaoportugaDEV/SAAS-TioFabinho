@@ -1,0 +1,257 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ArrowLeft, Upload, Save } from "lucide-react";
+import Link from "next/link";
+
+export default function NovoFreelancerPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [fotoUrl, setFotoUrl] = useState<string>("");
+  const [formData, setFormData] = useState({
+    nome: "",
+    funcao: "monitor" as "monitor" | "cozinheira" | "fotografo" | "outros",
+    whatsapp: "",
+    pix: "",
+    ativo: true,
+  });
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tamanho (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Arquivo muito grande. Máximo 5MB.");
+      return;
+    }
+
+    // Validar tipo
+    if (!file.type.startsWith("image/")) {
+      alert("Por favor, selecione uma imagem.");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      // Gerar nome único para o arquivo
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+      const filePath = `freelancers/${fileName}`;
+
+      // Upload para Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from("festa-fotos")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Obter URL pública
+      const { data } = supabase.storage
+        .from("festa-fotos")
+        .getPublicUrl(filePath);
+
+      setFotoUrl(data.publicUrl);
+    } catch (error) {
+      console.error("Erro ao fazer upload:", error);
+      alert("Erro ao fazer upload da foto");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.from("freelancers").insert([
+        {
+          ...formData,
+          foto_url: fotoUrl || null,
+          dias_disponiveis: [],
+        },
+      ]);
+
+      if (error) throw error;
+
+      router.push("/dashboard/freelancers");
+      router.refresh();
+    } catch (error) {
+      console.error("Erro ao criar freelancer:", error);
+      alert("Erro ao criar freelancer");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Link href="/dashboard/freelancers">
+          <Button variant="outline" size="icon">
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Novo Freelancer</h1>
+          <p className="text-gray-500 mt-1">Cadastre um novo membro da equipe</p>
+        </div>
+      </div>
+
+      {/* Formulário */}
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações do Freelancer</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Foto */}
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="w-32 h-32">
+                {fotoUrl ? (
+                  <AvatarImage src={fotoUrl} alt="Foto" />
+                ) : (
+                  <AvatarFallback className="bg-gray-200 text-gray-500 text-2xl">
+                    {formData.nome ? formData.nome.substring(0, 2).toUpperCase() : "?"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
+              <div>
+                <input
+                  type="file"
+                  id="foto"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                <Label htmlFor="foto">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={uploading}
+                    onClick={() => document.getElementById("foto")?.click()}
+                    className="cursor-pointer"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {uploading ? "Enviando..." : "Escolher Foto"}
+                  </Button>
+                </Label>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Máximo 5MB - JPG, PNG ou WebP
+                </p>
+              </div>
+            </div>
+
+            {/* Nome */}
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome Completo *</Label>
+              <Input
+                id="nome"
+                value={formData.nome}
+                onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                placeholder="Ex: João Silva"
+                required
+              />
+            </div>
+
+            {/* Função */}
+            <div className="space-y-2">
+              <Label htmlFor="funcao">Função *</Label>
+              <Select
+                id="funcao"
+                value={formData.funcao}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    funcao: e.target.value as typeof formData.funcao,
+                  })
+                }
+                required
+              >
+                <option value="monitor">Monitor</option>
+                <option value="cozinheira">Cozinheira</option>
+                <option value="fotografo">Fotógrafo</option>
+                <option value="outros">Outros</option>
+              </Select>
+            </div>
+
+            {/* WhatsApp */}
+            <div className="space-y-2">
+              <Label htmlFor="whatsapp">WhatsApp *</Label>
+              <Input
+                id="whatsapp"
+                value={formData.whatsapp}
+                onChange={(e) =>
+                  setFormData({ ...formData, whatsapp: e.target.value })
+                }
+                placeholder="(18) 99999-9999"
+                required
+              />
+              <p className="text-xs text-gray-500">
+                Digite apenas números ou com formatação
+              </p>
+            </div>
+
+            {/* PIX */}
+            <div className="space-y-2">
+              <Label htmlFor="pix">Chave PIX *</Label>
+              <Input
+                id="pix"
+                value={formData.pix}
+                onChange={(e) => setFormData({ ...formData, pix: e.target.value })}
+                placeholder="CPF, telefone, email ou chave aleatória"
+                required
+              />
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="ativo"
+                checked={formData.ativo}
+                onChange={(e) =>
+                  setFormData({ ...formData, ativo: e.target.checked })
+                }
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+              />
+              <Label htmlFor="ativo" className="cursor-pointer">
+                Freelancer ativo
+              </Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Botões */}
+        <div className="flex gap-4 mt-6">
+          <Link href="/dashboard/freelancers" className="flex-1">
+            <Button type="button" variant="outline" className="w-full">
+              Cancelar
+            </Button>
+          </Link>
+          <Button type="submit" disabled={loading} className="flex-1 gap-2">
+            <Save className="w-4 h-4" />
+            {loading ? "Salvando..." : "Salvar Freelancer"}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
