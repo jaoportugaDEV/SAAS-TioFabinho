@@ -6,13 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle } from "lucide-react";
-import { formatPhone, whatsappLink } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle, DollarSign } from "lucide-react";
+import { formatPhone, whatsappLink, formatCurrency } from "@/lib/utils";
 import {
   addFreelancerToFesta,
   removeFreelancerFromFesta,
   updateFreelancerConfirmacao,
 } from "@/app/actions/festas";
+import { updateValorFreelancerFesta } from "@/app/actions/pagamentos";
 
 interface FreelancerManagerProps {
   festaId: string;
@@ -49,6 +52,8 @@ export function FreelancerManager({
   const [availableFreelancers, setAvailableFreelancers] = useState(initialAvailableFreelancers);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [editandoValor, setEditandoValor] = useState<string | null>(null);
+  const [valorTemp, setValorTemp] = useState<number>(0);
 
   // Verifica se o freelancer está disponível na data da festa
   const isAvailable = (freelancer: Freelancer): boolean => {
@@ -123,6 +128,32 @@ export function FreelancerManager({
       ));
       alert("Erro ao atualizar status. Tente novamente.");
     }
+  };
+
+  const handleEditarValor = (freelancerId: string, valorAtual: number) => {
+    setEditandoValor(freelancerId);
+    setValorTemp(valorAtual);
+  };
+
+  const handleSalvarValor = async (freelancerId: string) => {
+    const result = await updateValorFreelancerFesta(festaId, freelancerId, valorTemp);
+    
+    if (result.success) {
+      // Atualiza localmente
+      setFestaFreelancers(festaFreelancers.map(f => 
+        f.freelancer_id === freelancerId 
+          ? { ...f, valor_acordado: valorTemp } 
+          : f
+      ));
+      setEditandoValor(null);
+    } else {
+      alert("Erro ao atualizar valor. Tente novamente.");
+    }
+  };
+
+  const handleCancelarEdicao = () => {
+    setEditandoValor(null);
+    setValorTemp(0);
   };
 
   return (
@@ -309,6 +340,58 @@ export function FreelancerManager({
                           </>
                         )}
                       </Badge>
+                    </div>
+                    
+                    {/* Valor Acordado */}
+                    <div className="mt-3 p-2 bg-gray-50 rounded-md border border-gray-200">
+                      {editandoValor === festaFreelancer.freelancer_id ? (
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs text-gray-600">Valor:</Label>
+                          <div className="relative flex-1">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-gray-500">R$</span>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={valorTemp}
+                              onChange={(e) => setValorTemp(parseFloat(e.target.value) || 0)}
+                              className="h-7 text-xs pl-8"
+                            />
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={() => handleSalvarValor(festaFreelancer.freelancer_id)}
+                            className="h-7 text-xs px-2"
+                          >
+                            Salvar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={handleCancelarEdicao}
+                            className="h-7 text-xs px-2"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <DollarSign className="w-4 h-4 text-green-600" />
+                            <span className="text-sm font-semibold text-green-600">
+                              {formatCurrency(festaFreelancer.valor_acordado || 0)}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleEditarValor(festaFreelancer.freelancer_id, festaFreelancer.valor_acordado || 0)}
+                            className="h-6 text-xs px-2 text-gray-600 hover:text-primary"
+                          >
+                            Editar
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   

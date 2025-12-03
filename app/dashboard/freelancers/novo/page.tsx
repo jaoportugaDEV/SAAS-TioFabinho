@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Upload, Save } from "lucide-react";
 import Link from "next/link";
+import { VALORES_PADRAO_POR_FUNCAO } from "@/lib/constants";
 
 export default function NovoFreelancerPage() {
   const router = useRouter();
@@ -25,8 +26,15 @@ export default function NovoFreelancerPage() {
     funcao: "monitor" as "monitor" | "cozinheira" | "fotografo" | "garcom" | "recepcao" | "outros",
     whatsapp: "",
     pix: "",
+    valor_padrao: 50, // Valor inicial para monitor
     ativo: true,
   });
+
+  // Atualizar valor padrão quando a função mudar
+  useEffect(() => {
+    const valorPadrao = VALORES_PADRAO_POR_FUNCAO[formData.funcao];
+    setFormData(prev => ({ ...prev, valor_padrao: valorPadrao }));
+  }, [formData.funcao]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -222,6 +230,31 @@ export default function NovoFreelancerPage() {
                 placeholder="CPF, telefone, email ou chave aleatória"
                 required
               />
+            </div>
+
+            {/* Valor Padrão */}
+            <div className="space-y-2">
+              <Label htmlFor="valor_padrao">Valor Padrão por Festa *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                <Input
+                  id="valor_padrao"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.valor_padrao}
+                  onChange={(e) => setFormData({ ...formData, valor_padrao: parseFloat(e.target.value) || 0 })}
+                  placeholder="0,00"
+                  className="pl-10"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                {VALORES_PADRAO_POR_FUNCAO[formData.funcao] > 0 
+                  ? `Valor padrão para ${formData.funcao}: R$ ${VALORES_PADRAO_POR_FUNCAO[formData.funcao].toFixed(2)}. Você pode editar para dar bônus.`
+                  : "Defina o valor que este freelancer receberá por festa."
+                }
+              </p>
             </div>
 
             {/* Status */}

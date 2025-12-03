@@ -9,6 +9,7 @@ import {
   Users,
   PartyPopper,
   DollarSign,
+  Wallet,
   FileText,
   Calculator,
   CheckSquare,
@@ -46,6 +47,11 @@ const menuItems = [
     title: "Financeiro",
     href: "/dashboard/financeiro",
     icon: DollarSign,
+  },
+  {
+    title: "Pagamentos",
+    href: "/dashboard/pagamentos",
+    icon: Wallet,
   },
   {
     title: "Contratos",

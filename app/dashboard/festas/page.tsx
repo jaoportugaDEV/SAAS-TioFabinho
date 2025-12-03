@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Calendar, Eye } from "lucide-react";
+import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -17,6 +17,12 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   em_andamento: { label: "Em Andamento", color: "bg-yellow-100 text-yellow-800" },
   concluida: { label: "Concluída", color: "bg-gray-100 text-gray-800" },
   cancelada: { label: "Cancelada", color: "bg-red-100 text-red-800" },
+};
+
+const statusPagamentoLabels: Record<string, { label: string; color: string; icon: any }> = {
+  pendente: { label: "Pagamento Pendente", color: "bg-red-100 text-red-800 border-red-200", icon: Clock },
+  parcial: { label: "Pagamento Parcial", color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Wallet },
+  pago: { label: "Pagamento Completo", color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle },
 };
 
 export default function FestasPage() {
@@ -135,9 +141,22 @@ export default function FestasPage() {
                           </p>
                         )}
                       </div>
-                      <Badge className={statusInfo.color}>
-                        {statusInfo.label}
-                      </Badge>
+                      <div className="flex flex-col gap-2">
+                        <Badge className={statusInfo.color}>
+                          {statusInfo.label}
+                        </Badge>
+                        {festa.status_pagamento_freelancers && (
+                          <Badge 
+                            className={`${statusPagamentoLabels[festa.status_pagamento_freelancers]?.color || 'bg-gray-100 text-gray-800'} border`}
+                          >
+                            {(() => {
+                              const Icon = statusPagamentoLabels[festa.status_pagamento_freelancers]?.icon;
+                              return Icon ? <Icon className="w-3 h-3 mr-1" /> : null;
+                            })()}
+                            {statusPagamentoLabels[festa.status_pagamento_freelancers]?.label || 'Status Desconhecido'}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-4 mt-4 text-sm text-gray-600">

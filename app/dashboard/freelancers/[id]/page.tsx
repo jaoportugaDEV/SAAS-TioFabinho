@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Upload, Save, Calendar as CalendarIcon } from "lucide-react";
 import Link from "next/link";
+import { VALORES_PADRAO_POR_FUNCAO } from "@/lib/constants";
 
 export default function EditarFreelancerPage() {
   const params = useParams();
@@ -24,6 +25,7 @@ export default function EditarFreelancerPage() {
   const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>("");
   const [diasSemana, setDiasSemana] = useState<number[]>([]);
+  const [funcaoAnterior, setFuncaoAnterior] = useState<string>("");
 
   useEffect(() => {
     loadFreelancer();
@@ -42,6 +44,7 @@ export default function EditarFreelancerPage() {
       setFreelancer(data);
       setFotoUrl(data.foto_url || "");
       setDiasSemana(data.dias_semana_disponiveis || []);
+      setFuncaoAnterior(data.funcao);
     } catch (error) {
       console.error("Erro ao carregar freelancer:", error);
       alert("Freelancer não encontrado");
@@ -99,6 +102,21 @@ export default function EditarFreelancerPage() {
     }
   };
 
+  // Atualizar valor padrão quando a função mudar
+  const handleFuncaoChange = (novaFuncao: string) => {
+    if (!freelancer) return;
+    
+    const valorPadraoNovo = VALORES_PADRAO_POR_FUNCAO[novaFuncao as keyof typeof VALORES_PADRAO_POR_FUNCAO];
+    
+    // Atualizar função e valor padrão
+    setFreelancer({ 
+      ...freelancer, 
+      funcao: novaFuncao as typeof freelancer.funcao,
+      valor_padrao: valorPadraoNovo
+    });
+    setFuncaoAnterior(novaFuncao);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!freelancer) return;
@@ -113,6 +131,7 @@ export default function EditarFreelancerPage() {
           funcao: freelancer.funcao,
           whatsapp: freelancer.whatsapp,
           pix: freelancer.pix,
+          valor_padrao: freelancer.valor_padrao,
           foto_url: fotoUrl || null,
           ativo: freelancer.ativo,
           dias_semana_disponiveis: diasSemana,
@@ -219,12 +238,7 @@ export default function EditarFreelancerPage() {
               <Select
                 id="funcao"
                 value={freelancer.funcao}
-                onChange={(e) =>
-                  setFreelancer({
-                    ...freelancer,
-                    funcao: e.target.value as typeof freelancer.funcao,
-                  })
-                }
+                onChange={(e) => handleFuncaoChange(e.target.value)}
                 required
               >
                 <option value="monitor">Monitor</option>
@@ -234,6 +248,11 @@ export default function EditarFreelancerPage() {
                 <option value="recepcao">Recepção</option>
                 <option value="outros">Outros</option>
               </Select>
+              {funcaoAnterior !== freelancer.funcao && (
+                <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  💡 Valor atualizado automaticamente para R$ {VALORES_PADRAO_POR_FUNCAO[freelancer.funcao].toFixed(2)}. Você pode editá-lo abaixo.
+                </p>
+              )}
             </div>
 
             {/* WhatsApp */}
@@ -260,6 +279,33 @@ export default function EditarFreelancerPage() {
                 }
                 required
               />
+            </div>
+
+            {/* Valor Padrão */}
+            <div className="space-y-2">
+              <Label htmlFor="valor_padrao">Valor Padrão por Festa *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                <Input
+                  id="valor_padrao"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={freelancer.valor_padrao}
+                  onChange={(e) =>
+                    setFreelancer({ ...freelancer, valor_padrao: parseFloat(e.target.value) || 0 })
+                  }
+                  placeholder="0,00"
+                  className="pl-10"
+                  required
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                {VALORES_PADRAO_POR_FUNCAO[freelancer.funcao] > 0 
+                  ? `Valor padrão para ${freelancer.funcao}: R$ ${VALORES_PADRAO_POR_FUNCAO[freelancer.funcao].toFixed(2)}. Você pode editar para dar bônus.`
+                  : "Defina o valor que este freelancer receberá por festa."
+                }
+              </p>
             </div>
 
             {/* Status */}

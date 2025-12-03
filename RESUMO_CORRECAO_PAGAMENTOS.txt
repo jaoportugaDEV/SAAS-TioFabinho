@@ -1,0 +1,82 @@
+═══════════════════════════════════════════════════════
+   🎯 CORREÇÃO: VALORES R$ 0,00 NOS PAGAMENTOS
+═══════════════════════════════════════════════════════
+
+📌 PROBLEMA IDENTIFICADO:
+   Na página de Pagamentos, os valores dos freelancers 
+   estavam aparecendo como R$ 0,00
+
+📌 CAUSA:
+   Freelancers antigos não tinham valor_padrao definido
+   no banco de dados (estava zerado)
+
+📌 SOLUÇÃO CRIADA:
+   ✅ Script SQL que corrige automaticamente TODOS os valores
+   ✅ Atualiza freelancers existentes
+   ✅ Atualiza festas já cadastradas
+   ✅ Corrige pagamentos pendentes
+
+═══════════════════════════════════════════════════════
+
+⚡ AÇÃO NECESSÁRIA:
+
+   1. Entre no Supabase (https://supabase.com/dashboard)
+   2. Vá em SQL Editor
+   3. Copie e execute o arquivo:
+      → migration-corrigir-valores-freelancers.sql
+   4. Pronto! ✅
+
+═══════════════════════════════════════════════════════
+
+📁 ARQUIVOS CRIADOS:
+
+   1. migration-corrigir-valores-freelancers.sql
+      → Script SQL para executar no Supabase
+   
+   2. GUIA_RAPIDO_CORRECAO.md
+      → Instruções passo a passo com imagens
+   
+   3. CORRECAO_VALORES_PAGAMENTOS.md
+      → Documentação completa e técnica
+   
+   4. RESUMO_CORRECAO_PAGAMENTOS.txt
+      → Este arquivo (resumo executivo)
+
+═══════════════════════════════════════════════════════
+
+💰 VALORES QUE SERÃO PREENCHIDOS:
+
+   Monitor ........... R$ 50,00
+   Cozinheira ........ R$ 80,00
+   Recepção .......... R$ 50,00
+   Garçom ............ R$ 60,00
+   Fotógrafo ......... R$ 0,00 (editável)
+   Outros ............ R$ 0,00 (editável)
+
+═══════════════════════════════════════════════════════
+
+✨ RESULTADO ESPERADO:
+
+   ANTES:
+   ❌ João (Monitor) ........... R$ 0,00
+   ❌ Maria (Cozinheira) ....... R$ 0,00
+   ❌ Pedro (Garçom) ........... R$ 0,00
+
+   DEPOIS:
+   ✅ João (Monitor) ........... R$ 50,00
+   ✅ Maria (Cozinheira) ....... R$ 80,00
+   ✅ Pedro (Garçom) ........... R$ 60,00
+
+═══════════════════════════════════════════════════════
+
+⏰ TEMPO ESTIMADO: 2 minutos
+🎯 DIFICULDADE: Fácil
+✅ RESULTADO: Automático
+
+═══════════════════════════════════════════════════════
+
+📖 PARA MAIS DETALHES:
+   Leia: GUIA_RAPIDO_CORRECAO.md
+
+═══════════════════════════════════════════════════════
+
