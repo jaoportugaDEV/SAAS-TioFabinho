@@ -67,7 +67,16 @@ export function StepFreelancers({ formData, setFormData }: StepFreelancersProps)
 
   const isAvailable = (freelancer: Freelancer) => {
     if (!formData.data) return true;
-    return freelancer.dias_disponiveis.includes(formData.data);
+    
+    // Se o freelancer usa o novo sistema de dias da semana
+    if (freelancer.dias_semana_disponiveis && freelancer.dias_semana_disponiveis.length > 0) {
+      // Pegar o dia da semana da data da festa (0=Domingo, 6=Sábado)
+      const diaSemanaFesta = new Date(formData.data + "T00:00:00").getDay();
+      return freelancer.dias_semana_disponiveis.includes(diaSemanaFesta);
+    }
+    
+    // Fallback para o sistema antigo de datas exatas (compatibilidade)
+    return freelancer.dias_disponiveis?.includes(formData.data) || false;
   };
 
   if (loading) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,11 +21,13 @@ const steps = [
   { id: 5, title: "Checklist" },
 ];
 
-export default function NovaFestaPage() {
+export default function EditarFestaPage() {
   const router = useRouter();
+  const params = useParams();
   const supabase = createClient();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Estado do formulário
@@ -53,11 +55,79 @@ export default function NovaFestaPage() {
     checklist: [] as string[],
   });
 
+  useEffect(() => {
+    loadFestaData();
+  }, [params.id]);
+
+  const loadFestaData = async () => {
+    try {
+      setLoadingData(true);
+
+      // Carregar festa
+      const { data: festaData, error: festaError } = await supabase
+        .from("festas")
+        .select("*")
+        .eq("id", params.id)
+        .single();
+
+      if (festaError) throw festaError;
+
+      // Carregar freelancers da festa
+      const { data: festaFreelancersData } = await supabase
+        .from("festa_freelancers")
+        .select("freelancer_id")
+        .eq("festa_id", params.id);
+
+      const freelancerIds = festaFreelancersData?.map((f) => f.freelancer_id) || [];
+
+      // Carregar orçamento
+      const { data: orcamentoData } = await supabase
+        .from("orcamentos")
+        .select("*")
+        .eq("festa_id", params.id)
+        .single();
+
+      // Carregar checklist
+      const { data: checklistData } = await supabase
+        .from("checklist")
+        .select("tarefa")
+        .eq("festa_id", params.id)
+        .order("ordem", { ascending: true });
+
+      const checklistTarefas = checklistData?.map((c) => c.tarefa) || [];
+
+      // Preencher formulário com dados existentes
+      setFormData({
+        titulo: festaData.titulo || "",
+        data: festaData.data || "",
+        horario: festaData.horario || "",
+        tema: festaData.tema || "",
+        local: festaData.local || "",
+        status: festaData.status || "planejamento",
+        cliente_nome: festaData.cliente_nome || "",
+        cliente_contato: festaData.cliente_contato || "",
+        cliente_observacoes: festaData.cliente_observacoes || "",
+        freelancers: freelancerIds,
+        orcamento: {
+          itens: orcamentoData?.itens || [],
+          desconto: orcamentoData?.desconto || 0,
+          acrescimo: orcamentoData?.acrescimo || 0,
+        },
+        checklist: checklistTarefas,
+      });
+    } catch (error) {
+      console.error("Erro ao carregar dados:", error);
+      alert("Erro ao carregar dados da festa");
+      router.push("/dashboard/festas");
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
   const validateStep = (step: number): boolean => {
     const newErrors: Record<string, string> = {};
 
     if (step === 1) {
-      // Validar Step 1 - Informações Básicas
       if (!formData.titulo.trim()) {
         newErrors.titulo = "O título da festa é obrigatório";
       }
@@ -65,7 +135,6 @@ export default function NovaFestaPage() {
         newErrors.data = "A data da festa é obrigatória";
       }
     } else if (step === 2) {
-      // Validar Step 2 - Cliente
       if (!formData.cliente_nome.trim()) {
         newErrors.cliente_nome = "O nome do cliente é obrigatório";
       }
@@ -73,7 +142,6 @@ export default function NovaFestaPage() {
         newErrors.cliente_contato = "O contato do cliente é obrigatório";
       }
     }
-    // Steps 3, 4 e 5 são opcionais
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -83,7 +151,7 @@ export default function NovaFestaPage() {
     if (validateStep(currentStep)) {
       if (currentStep < steps.length) {
         setCurrentStep(currentStep + 1);
-        setErrors({}); // Limpar erros ao avançar
+        setErrors({});
       }
     }
   };
@@ -91,45 +159,46 @@ export default function NovaFestaPage() {
   const handlePrev = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
-      setErrors({}); // Limpar erros ao voltar
+      setErrors({});
     }
   };
 
   const handleSubmit = async () => {
-    // Validar todos os campos obrigatórios antes de submeter
     if (!validateStep(1) || !validateStep(2)) {
-      alert("Por favor, preencha todos os campos obrigatórios antes de criar a festa.");
+      alert("Por favor, preencha todos os campos obrigatórios antes de salvar.");
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Criar a festa
-      const { data: festa, error: festaError } = await supabase
+      // 1. Atualizar a festa
+      const { error: festaError } = await supabase
         .from("festas")
-        .insert([
-          {
-            titulo: formData.titulo,
-            data: formData.data,
-            horario: formData.horario || null,
-            tema: formData.tema,
-            local: formData.local,
-            cliente_nome: formData.cliente_nome,
-            cliente_contato: formData.cliente_contato,
-            cliente_observacoes: formData.cliente_observacoes,
-            status: formData.status,
-          },
-        ])
-        .select()
-        .single();
+        .update({
+          titulo: formData.titulo,
+          data: formData.data,
+          horario: formData.horario || null,
+          tema: formData.tema,
+          local: formData.local,
+          cliente_nome: formData.cliente_nome,
+          cliente_contato: formData.cliente_contato,
+          cliente_observacoes: formData.cliente_observacoes,
+          status: formData.status,
+        })
+        .eq("id", params.id);
 
       if (festaError) throw festaError;
 
-      // 2. Adicionar freelancers
+      // 2. Atualizar freelancers - remover todos e adicionar novos
+      await supabase
+        .from("festa_freelancers")
+        .delete()
+        .eq("festa_id", params.id);
+
       if (formData.freelancers.length > 0) {
         const freelancerInserts = formData.freelancers.map((freelancerId) => ({
-          festa_id: festa.id,
+          festa_id: params.id,
           freelancer_id: freelancerId,
         }));
 
@@ -140,7 +209,7 @@ export default function NovaFestaPage() {
         if (freelancerError) throw freelancerError;
       }
 
-      // 3. Criar orçamento
+      // 3. Atualizar orçamento
       const total =
         formData.orcamento.itens.reduce(
           (acc, item) => acc + item.quantidade * item.valor_unitario,
@@ -149,25 +218,53 @@ export default function NovaFestaPage() {
         formData.orcamento.desconto +
         formData.orcamento.acrescimo;
 
-      const { error: orcamentoError } = await supabase
+      // Verificar se já existe orçamento
+      const { data: orcamentoExistente } = await supabase
         .from("orcamentos")
-        .insert([
-          {
-            festa_id: festa.id,
+        .select("id")
+        .eq("festa_id", params.id)
+        .single();
+
+      if (orcamentoExistente) {
+        // Atualizar orçamento existente
+        const { error: orcamentoError } = await supabase
+          .from("orcamentos")
+          .update({
             itens: formData.orcamento.itens,
             desconto: formData.orcamento.desconto,
             acrescimo: formData.orcamento.acrescimo,
             total,
-            status_pagamento: "pendente",
-          },
-        ]);
+          })
+          .eq("festa_id", params.id);
 
-      if (orcamentoError) throw orcamentoError;
+        if (orcamentoError) throw orcamentoError;
+      } else {
+        // Criar novo orçamento
+        const { error: orcamentoError } = await supabase
+          .from("orcamentos")
+          .insert([
+            {
+              festa_id: params.id,
+              itens: formData.orcamento.itens,
+              desconto: formData.orcamento.desconto,
+              acrescimo: formData.orcamento.acrescimo,
+              total,
+              status_pagamento: "pendente",
+            },
+          ]);
 
-      // 4. Criar checklist
+        if (orcamentoError) throw orcamentoError;
+      }
+
+      // 4. Atualizar checklist - remover todos e adicionar novos
+      await supabase
+        .from("checklist")
+        .delete()
+        .eq("festa_id", params.id);
+
       if (formData.checklist.length > 0) {
         const checklistInserts = formData.checklist.map((tarefa, index) => ({
-          festa_id: festa.id,
+          festa_id: params.id,
           tarefa,
           concluido: false,
           ordem: index,
@@ -180,27 +277,39 @@ export default function NovaFestaPage() {
         if (checklistError) throw checklistError;
       }
 
-      router.push(`/dashboard/festas/${festa.id}`);
+      alert("Festa atualizada com sucesso!");
+      router.push(`/dashboard/festas/${params.id}`);
       router.refresh();
     } catch (error) {
-      console.error("Erro ao criar festa:", error);
-      alert("Erro ao criar festa. Tente novamente.");
+      console.error("Erro ao atualizar festa:", error);
+      alert("Erro ao atualizar festa. Tente novamente.");
     } finally {
       setLoading(false);
     }
   };
 
+  if (loadingData) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando dados...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/dashboard/festas">
+        <Link href={`/dashboard/festas/${params.id}`}>
           <Button variant="outline" size="icon">
             <ArrowLeft className="w-4 h-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nova Festa</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Editar Festa</h1>
           <p className="text-gray-500 mt-1">
             Passo {currentStep} de {steps.length}: {steps[currentStep - 1].title}
           </p>
@@ -307,7 +416,7 @@ export default function NovaFestaPage() {
         ) : (
           <Button onClick={handleSubmit} disabled={loading} className="gap-2">
             <Save className="w-4 h-4" />
-            {loading ? "Salvando..." : "Criar Festa"}
+            {loading ? "Salvando..." : "Salvar Alterações"}
           </Button>
         )}
       </div>

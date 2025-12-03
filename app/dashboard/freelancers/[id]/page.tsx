@@ -23,7 +23,7 @@ export default function EditarFreelancerPage() {
   const [uploading, setUploading] = useState(false);
   const [freelancer, setFreelancer] = useState<Freelancer | null>(null);
   const [fotoUrl, setFotoUrl] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState("");
+  const [diasSemana, setDiasSemana] = useState<number[]>([]);
 
   useEffect(() => {
     loadFreelancer();
@@ -41,6 +41,7 @@ export default function EditarFreelancerPage() {
       
       setFreelancer(data);
       setFotoUrl(data.foto_url || "");
+      setDiasSemana(data.dias_semana_disponiveis || []);
     } catch (error) {
       console.error("Erro ao carregar freelancer:", error);
       alert("Freelancer não encontrado");
@@ -90,25 +91,12 @@ export default function EditarFreelancerPage() {
     }
   };
 
-  const handleAddDate = () => {
-    if (!selectedDate || !freelancer) return;
-    
-    const diasDisponiveis = freelancer.dias_disponiveis || [];
-    if (!diasDisponiveis.includes(selectedDate)) {
-      setFreelancer({
-        ...freelancer,
-        dias_disponiveis: [...diasDisponiveis, selectedDate].sort(),
-      });
+  const toggleDiaSemana = (dia: number) => {
+    if (diasSemana.includes(dia)) {
+      setDiasSemana(diasSemana.filter(d => d !== dia));
+    } else {
+      setDiasSemana([...diasSemana, dia].sort());
     }
-    setSelectedDate("");
-  };
-
-  const handleRemoveDate = (date: string) => {
-    if (!freelancer) return;
-    setFreelancer({
-      ...freelancer,
-      dias_disponiveis: freelancer.dias_disponiveis.filter((d) => d !== date),
-    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -127,7 +115,7 @@ export default function EditarFreelancerPage() {
           pix: freelancer.pix,
           foto_url: fotoUrl || null,
           ativo: freelancer.ativo,
-          dias_disponiveis: freelancer.dias_disponiveis,
+          dias_semana_disponiveis: diasSemana,
         })
         .eq("id", params.id);
 
@@ -290,56 +278,66 @@ export default function EditarFreelancerPage() {
           </CardContent>
         </Card>
 
-        {/* Dias Disponíveis */}
+        {/* Dias da Semana Disponíveis */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="w-5 h-5" />
-              Dias Disponíveis
+              Dias da Semana Disponíveis
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600">
-              Adicione as datas em que este freelancer está disponível para trabalhar.
+              Selecione os dias da semana em que este freelancer está disponível para trabalhar.
             </p>
             
-            <div className="flex gap-2">
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="flex-1"
-              />
-              <Button
-                type="button"
-                onClick={handleAddDate}
-                disabled={!selectedDate}
-                variant="outline"
-              >
-                Adicionar
-              </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { valor: 0, nome: "Domingo" },
+                { valor: 1, nome: "Segunda-feira" },
+                { valor: 2, nome: "Terça-feira" },
+                { valor: 3, nome: "Quarta-feira" },
+                { valor: 4, nome: "Quinta-feira" },
+                { valor: 5, nome: "Sexta-feira" },
+                { valor: 6, nome: "Sábado" },
+              ].map((dia) => (
+                <div
+                  key={dia.valor}
+                  onClick={() => toggleDiaSemana(dia.valor)}
+                  className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    diasSemana.includes(dia.valor)
+                      ? "border-primary bg-primary/5"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={diasSemana.includes(dia.valor)}
+                      onChange={() => {}}
+                      className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <Label className="cursor-pointer font-medium">
+                      {dia.nome}
+                    </Label>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {freelancer.dias_disponiveis && freelancer.dias_disponiveis.length > 0 && (
-              <div className="border rounded-md p-4 space-y-2">
-                {freelancer.dias_disponiveis.map((date) => (
-                  <div
-                    key={date}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded"
-                  >
-                    <span className="text-sm">
-                      {new Date(date + "T00:00:00").toLocaleDateString("pt-BR")}
-                    </span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleRemoveDate(date)}
-                    >
-                      Remover
-                    </Button>
-                  </div>
-                ))}
+            {diasSemana.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Nenhum dia da semana selecionado. Este freelancer não aparecerá como disponível ao criar festas.
+                </p>
+              </div>
+            )}
+
+            {diasSemana.length > 0 && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <p className="text-sm text-green-800">
+                  ✓ Disponível em {diasSemana.length} {diasSemana.length === 1 ? "dia" : "dias"} da semana
+                </p>
               </div>
             )}
           </CardContent>

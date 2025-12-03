@@ -144,6 +144,11 @@ export default function FestasPage() {
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4" />
                         {formatDate(festa.data)}
+                        {festa.horario && (
+                          <span className="text-primary font-medium">
+                            às {festa.horario}
+                          </span>
+                        )}
                       </div>
                       {festa.local && (
                         <div className="flex items-center gap-2">

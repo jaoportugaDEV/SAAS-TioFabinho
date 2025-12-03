@@ -5,9 +5,10 @@ import { Textarea } from "@/components/ui/textarea";
 interface StepClienteProps {
   formData: any;
   setFormData: (data: any) => void;
+  errors?: Record<string, string>;
 }
 
-export function StepCliente({ formData, setFormData }: StepClienteProps) {
+export function StepCliente({ formData, setFormData, errors = {} }: StepClienteProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Informações do Cliente</h2>
@@ -23,7 +24,11 @@ export function StepCliente({ formData, setFormData }: StepClienteProps) {
             }
             placeholder="Nome completo"
             required
+            className={errors.cliente_nome ? "border-red-500 focus-visible:ring-red-500" : ""}
           />
+          {errors.cliente_nome && (
+            <p className="text-sm text-red-600 mt-1">{errors.cliente_nome}</p>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -36,7 +41,11 @@ export function StepCliente({ formData, setFormData }: StepClienteProps) {
             }
             placeholder="(18) 99999-9999"
             required
+            className={errors.cliente_contato ? "border-red-500 focus-visible:ring-red-500" : ""}
           />
+          {errors.cliente_contato && (
+            <p className="text-sm text-red-600 mt-1">{errors.cliente_contato}</p>
+          )}
         </div>
 
         <div className="space-y-2">

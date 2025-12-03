@@ -4,6 +4,8 @@ export type StatusFesta = 'planejamento' | 'confirmada' | 'em_andamento' | 'conc
 
 export type StatusPagamento = 'pendente' | 'pago_parcial' | 'pago_total';
 
+export type StatusConfirmacao = 'pendente' | 'confirmado';
+
 export interface Freelancer {
   id: string;
   nome: string;
@@ -11,7 +13,8 @@ export interface Freelancer {
   funcao: FuncaoFreelancer;
   whatsapp: string;
   pix: string;
-  dias_disponiveis: string[]; // Array de datas ISO
+  dias_disponiveis: string[]; // Array de datas ISO (deprecated - usar dias_semana_disponiveis)
+  dias_semana_disponiveis: number[]; // Array de dias da semana (0=Domingo, 1=Segunda, ..., 6=Sábado)
   ativo: boolean;
   created_at: string;
 }
@@ -20,6 +23,7 @@ export interface Festa {
   id: string;
   titulo: string;
   data: string;
+  horario?: string;
   tema: string;
   local: string;
   cliente_nome: string;
@@ -33,6 +37,7 @@ export interface FestaFreelancer {
   id: string;
   festa_id: string;
   freelancer_id: string;
+  status_confirmacao: StatusConfirmacao;
   freelancer?: Freelancer;
 }
 

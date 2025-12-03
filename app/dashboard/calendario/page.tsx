@@ -160,8 +160,9 @@ export default function CalendarioPage() {
                         key={festa.id}
                         href={`/dashboard/festas/${festa.id}`}
                         className="block text-xs bg-primary text-white rounded px-1 py-0.5 mb-1 truncate hover:bg-primary/90"
+                        title={`${festa.titulo}${festa.horario ? ` às ${festa.horario}` : ""}`}
                       >
-                        {festa.titulo}
+                        {festa.horario ? `${festa.horario} - ` : ""}{festa.titulo}
                       </Link>
                     ))}
                     {festaDoDia.length > 2 && (
@@ -235,7 +236,12 @@ export default function CalendarioPage() {
                     <p className="text-sm text-gray-600">{festa.cliente_nome}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium">{formatDate(festa.data)}</p>
+                    <p className="text-sm font-medium">
+                      {formatDate(festa.data)}
+                      {festa.horario && (
+                        <span className="text-primary ml-1">às {festa.horario}</span>
+                      )}
+                    </p>
                     {festa.tema && (
                       <p className="text-xs text-gray-500">{festa.tema}</p>
                     )}

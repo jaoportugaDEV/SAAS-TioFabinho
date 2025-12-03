@@ -19,6 +19,7 @@ export default function NovoFreelancerPage() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fotoUrl, setFotoUrl] = useState<string>("");
+  const [diasSemana, setDiasSemana] = useState<number[]>([]);
   const [formData, setFormData] = useState({
     nome: "",
     funcao: "monitor" as "monitor" | "cozinheira" | "fotografo" | "outros",
@@ -82,6 +83,7 @@ export default function NovoFreelancerPage() {
           ...formData,
           foto_url: fotoUrl || null,
           dias_disponiveis: [],
+          dias_semana_disponiveis: diasSemana,
         },
       ]);
 
@@ -235,6 +237,69 @@ export default function NovoFreelancerPage() {
                 Freelancer ativo
               </Label>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Dias da Semana Disponíveis */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Dias da Semana Disponíveis</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Selecione os dias da semana em que este freelancer está disponível para trabalhar.
+            </p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { valor: 0, nome: "Domingo" },
+                { valor: 1, nome: "Segunda-feira" },
+                { valor: 2, nome: "Terça-feira" },
+                { valor: 3, nome: "Quarta-feira" },
+                { valor: 4, nome: "Quinta-feira" },
+                { valor: 5, nome: "Sexta-feira" },
+                { valor: 6, nome: "Sábado" },
+              ].map((dia) => {
+                const isSelected = diasSemana.includes(dia.valor);
+                return (
+                  <div
+                    key={dia.valor}
+                    onClick={() => {
+                      if (isSelected) {
+                        setDiasSemana(diasSemana.filter(d => d !== dia.valor));
+                      } else {
+                        setDiasSemana([...diasSemana, dia.valor].sort());
+                      }
+                    }}
+                    className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                      isSelected
+                        ? "border-primary bg-primary/5"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {}}
+                        className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                      />
+                      <Label className="cursor-pointer font-medium">
+                        {dia.nome}
+                      </Label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {diasSemana.length === 0 && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Nenhum dia da semana selecionado. Este freelancer não aparecerá como disponível ao criar festas.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
