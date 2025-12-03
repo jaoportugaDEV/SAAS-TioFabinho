@@ -41,8 +41,9 @@ Sistema web completo para gerenciamento de festas infantis, controle de equipe f
 - ✅ Sidebar com equipe ativa
 
 ### 📸 Galeria de Fotos
-- ✅ Upload ilimitado de fotos por festa
-- ✅ Armazenamento seguro no Supabase Storage
+- ✅ Upload ilimitado de fotos por festa (25GB grátis via Cloudinary)
+- ✅ Armazenamento em CDN global (carregamento rápido)
+- ✅ Otimização automática de imagens
 - ✅ Preview e download
 - ✅ Organização por festa
 
@@ -77,8 +78,8 @@ Sistema web completo para gerenciamento de festas infantis, controle de equipe f
 - **UI Components**: [shadcn/ui](https://ui.shadcn.com/)
 - **Backend**: [Supabase](https://supabase.com/)
   - PostgreSQL (Banco de dados)
-  - Storage (Fotos)
   - Auth (Autenticação)
+- **Storage**: [Cloudinary](https://cloudinary.com/) (Fotos - 25GB grátis)
 - **Deploy**: [Vercel](https://vercel.com/)
 
 ## 📦 Instalação
@@ -87,6 +88,7 @@ Sistema web completo para gerenciamento de festas infantis, controle de equipe f
 
 - Node.js 18+ instalado
 - Conta no Supabase (gratuita)
+- Conta no Cloudinary (gratuita - 25GB)
 - Conta no Vercel (gratuita) - para deploy
 
 ### 1. Clonar o Repositório
@@ -109,19 +111,33 @@ Siga o guia detalhado em: **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)**
 Resumo:
 1. Criar projeto no Supabase
 2. Executar o SQL em `supabase-schema.sql`
-3. Configurar Storage bucket
-4. Criar usuário admin
+3. Criar usuário admin
 
-### 4. Configurar Variáveis de Ambiente
+### 4. Configurar Cloudinary (Storage de Fotos)
+
+Siga o guia detalhado em: **[CLOUDINARY_SETUP.md](./CLOUDINARY_SETUP.md)**
+
+Resumo:
+1. Criar conta gratuita no Cloudinary
+2. Pegar Cloud Name no dashboard
+3. Criar Upload Preset (unsigned)
+4. Adicionar credenciais no `.env.local`
+
+### 5. Configurar Variáveis de Ambiente
 
 Crie um arquivo `.env.local` na raiz do projeto:
 
 ```env
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sua-chave-anon-aqui
+
+# Cloudinary (para fotos)
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=seu_cloud_name
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=festa_fotos_preset
 ```
 
-### 5. Executar em Desenvolvimento
+### 6. Executar em Desenvolvimento
 
 ```bash
 npm run dev
@@ -143,6 +159,7 @@ Siga o guia completo: **[DEPLOY.md](./DEPLOY.md)**
 
 - **[GUIA_DE_USO.md](./GUIA_DE_USO.md)** - Como usar o sistema
 - **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)** - Configurar banco de dados
+- **[CLOUDINARY_SETUP.md](./CLOUDINARY_SETUP.md)** - Configurar storage de fotos
 - **[DEPLOY.md](./DEPLOY.md)** - Fazer deploy no Vercel
 
 ## 📂 Estrutura do Projeto
@@ -171,6 +188,7 @@ tio-fabinho-saas/
 │   └── shared/                   # Componentes compartilhados
 ├── lib/                          # Utilitários
 │   ├── supabase/                 # Configuração Supabase
+│   ├── cloudinary.ts             # Utilitários Cloudinary
 │   ├── utils.ts                  # Funções utilitárias
 │   └── pdf/                      # Geração de PDFs
 ├── types/                        # Tipos TypeScript
