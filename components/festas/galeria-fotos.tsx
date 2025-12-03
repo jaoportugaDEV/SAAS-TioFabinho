@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Upload, X, Download } from "lucide-react";
 import Image from "next/image";
-import { uploadImageToCloudinary, validateImageFile } from "@/lib/cloudinary";
 
 interface GaleriaFotosProps {
   festaId: string;
@@ -54,20 +53,35 @@ export function GaleriaFotos({ festaId }: GaleriaFotosProps) {
     try {
       for (const file of files) {
         // Validar
-        const validation = validateImageFile(file, 10);
-        if (!validation.valid) {
-          alert(`${file.name}: ${validation.error}`);
+        if (!file.type.startsWith("image/")) {
+          alert(`${file.name} não é uma imagem`);
           continue;
         }
 
-        // Upload para Cloudinary
-        const folder = `tio-fabinho/festas/${festaId}`;
-        const imageUrl = await uploadImageToCloudinary(file, folder);
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`${file.name} é muito grande (máx 10MB)`);
+          continue;
+        }
 
-        // Salvar URL no banco Supabase
+        // Upload para Supabase Storage
+        const fileExt = file.name.split(".").pop();
+        const fileName = `${festaId}/${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from("festa-fotos")
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // Obter URL pública
+        const { data } = supabase.storage
+          .from("festa-fotos")
+          .getPublicUrl(fileName);
+
+        // Salvar no banco
         const { error: dbError } = await supabase
           .from("festa_fotos")
-          .insert([{ festa_id: festaId, foto_url: imageUrl }]);
+          .insert([{ festa_id: festaId, foto_url: data.publicUrl }]);
 
         if (dbError) throw dbError;
       }
@@ -75,7 +89,7 @@ export function GaleriaFotos({ festaId }: GaleriaFotosProps) {
       await loadFotos();
     } catch (error) {
       console.error("Erro ao fazer upload:", error);
-      alert("Erro ao fazer upload das fotos. Verifique sua conexão e tente novamente.");
+      alert("Erro ao fazer upload das fotos");
     } finally {
       setUploading(false);
       // Reset input
@@ -87,17 +101,19 @@ export function GaleriaFotos({ festaId }: GaleriaFotosProps) {
     if (!confirm("Deseja excluir esta foto?")) return;
 
     try {
-      // Deletar do banco Supabase
+      // Extrair caminho do arquivo da URL
+      const path = url.split("/festa-fotos/")[1];
+      
+      // Deletar do storage
+      await supabase.storage.from("festa-fotos").remove([path]);
+
+      // Deletar do banco
       const { error } = await supabase
         .from("festa_fotos")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
-
-      // Nota: As imagens no Cloudinary podem ser mantidas ou deletadas manualmente
-      // O Cloudinary Free tier tem 25GB de espaço, suficiente para muitos anos
-      // Se necessário, pode-se implementar delete via API route no futuro
 
       setFotos(fotos.filter((f) => f.id !== id));
     } catch (error) {
