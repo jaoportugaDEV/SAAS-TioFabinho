@@ -14,10 +14,10 @@ import { formatDate } from "@/lib/utils";
 const statusLabels: Record<string, { label: string; color: string }> = {
   planejamento: { label: "Planejamento", color: "bg-blue-100 text-blue-800" },
   confirmada: { label: "Confirmada", color: "bg-green-100 text-green-800" },
-  em_andamento: { label: "Em Andamento", color: "bg-yellow-100 text-yellow-800" },
   concluida: { label: "Concluída", color: "bg-gray-100 text-gray-800" },
-  cancelada: { label: "Cancelada", color: "bg-red-100 text-red-800" },
 };
+
+const statusOrder = ["planejamento", "confirmada", "concluida"] as const;
 
 const statusPagamentoLabels: Record<string, { label: string; color: string; icon: any }> = {
   pendente: { label: "Pagamento Pendente", color: "bg-red-100 text-red-800 border-red-200", icon: Clock },
@@ -48,6 +48,28 @@ export default function FestasPage() {
       console.error("Erro ao carregar festas:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleStatus = async (festaId: string, currentStatus: string) => {
+    try {
+      const currentIndex = statusOrder.indexOf(currentStatus as any);
+      const nextIndex = (currentIndex + 1) % statusOrder.length;
+      const nextStatus = statusOrder[nextIndex];
+
+      const { error } = await supabase
+        .from("festas")
+        .update({ status: nextStatus })
+        .eq("id", festaId);
+
+      if (error) throw error;
+
+      // Atualiza o estado local
+      setFestas(festas.map(f => 
+        f.id === festaId ? { ...f, status: nextStatus } : f
+      ));
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
     }
   };
 
@@ -142,7 +164,15 @@ export default function FestasPage() {
                         )}
                       </div>
                       <div className="flex flex-col gap-2">
-                        <Badge className={statusInfo.color}>
+                        <Badge 
+                          className={`${statusInfo.color} cursor-pointer hover:opacity-80 transition-opacity`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            toggleStatus(festa.id, festa.status);
+                          }}
+                          title="Clique para alterar o status"
+                        >
                           {statusInfo.label}
                         </Badge>
                         {festa.status_pagamento_freelancers && (

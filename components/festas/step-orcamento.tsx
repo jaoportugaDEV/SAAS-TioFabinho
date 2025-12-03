@@ -207,6 +207,92 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
         </div>
       </div>
 
+      {/* Forma de Pagamento */}
+      <div className="border-t pt-6 space-y-4">
+        <h3 className="font-semibold text-gray-900">Forma de Pagamento</h3>
+        
+        <div className="space-y-2">
+          <Label htmlFor="forma_pagamento">Tipo de Pagamento</Label>
+          <select
+            id="forma_pagamento"
+            value={formData.orcamento.forma_pagamento || 'avista'}
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                orcamento: {
+                  ...formData.orcamento,
+                  forma_pagamento: e.target.value,
+                  quantidade_parcelas: e.target.value === 'avista' ? 1 : (formData.orcamento.quantidade_parcelas || 2),
+                },
+              })
+            }
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <option value="avista">À Vista</option>
+            <option value="parcelado">Parcelado</option>
+          </select>
+        </div>
+
+        {formData.orcamento.forma_pagamento === 'parcelado' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="space-y-2">
+              <Label htmlFor="quantidade_parcelas">Quantidade de Parcelas</Label>
+              <Input
+                type="number"
+                id="quantidade_parcelas"
+                min="2"
+                max="12"
+                value={formData.orcamento.quantidade_parcelas || 2}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    orcamento: {
+                      ...formData.orcamento,
+                      quantidade_parcelas: Number(e.target.value),
+                    },
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="entrada">Entrada (R$) - Opcional</Label>
+              <Input
+                type="number"
+                id="entrada"
+                min="0"
+                step="0.01"
+                value={formData.orcamento.entrada || 0}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    orcamento: {
+                      ...formData.orcamento,
+                      entrada: Number(e.target.value),
+                    },
+                  })
+                }
+                placeholder="0.00"
+              />
+            </div>
+            {formData.orcamento.quantidade_parcelas > 1 && (
+              <div className="sm:col-span-2 text-sm text-gray-700">
+                <p className="font-semibold mb-1">Resumo do Parcelamento:</p>
+                <p>
+                  • Entrada: {formatCurrency(formData.orcamento.entrada || 0)}
+                </p>
+                <p>
+                  • Valor a parcelar: {formatCurrency(total - (formData.orcamento.entrada || 0))}
+                </p>
+                <p>
+                  • {formData.orcamento.quantidade_parcelas}x de{' '}
+                  {formatCurrency((total - (formData.orcamento.entrada || 0)) / formData.orcamento.quantidade_parcelas)}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Total */}
       <div className="bg-primary/5 border border-primary/20 rounded-lg p-6">
         <div className="flex justify-between items-center">

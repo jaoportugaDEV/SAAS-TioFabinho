@@ -10,12 +10,10 @@ interface StatusSelectorProps {
   currentStatus: StatusFesta;
 }
 
-const statusLabels: Record<StatusFesta, string> = {
+const statusLabels: Record<string, string> = {
   planejamento: "Planejamento",
   confirmada: "Confirmada",
-  em_andamento: "Em Andamento",
   concluida: "Concluída",
-  cancelada: "Cancelada",
 };
 
 export function StatusSelector({ festaId, currentStatus }: StatusSelectorProps) {
@@ -44,9 +42,7 @@ export function StatusSelector({ festaId, currentStatus }: StatusSelectorProps) 
     >
       <option value="planejamento">{statusLabels.planejamento}</option>
       <option value="confirmada">{statusLabels.confirmada}</option>
-      <option value="em_andamento">{statusLabels.em_andamento}</option>
       <option value="concluida">{statusLabels.concluida}</option>
-      <option value="cancelada">{statusLabels.cancelada}</option>
     </Select>
   );
 }

@@ -39,6 +39,9 @@ export default function EditarFestaPage() {
     tema: "",
     local: "",
     status: "planejamento" as const,
+    estimativa_convidados: undefined as number | undefined,
+    quantidade_criancas: undefined as number | undefined,
+    faixas_etarias: [] as string[],
     // Step 2
     cliente_nome: "",
     cliente_contato: "",
@@ -50,6 +53,9 @@ export default function EditarFestaPage() {
       itens: [] as Array<{ descricao: string; quantidade: number; valor_unitario: number }>,
       desconto: 0,
       acrescimo: 0,
+      forma_pagamento: "avista" as "avista" | "parcelado",
+      quantidade_parcelas: 1,
+      entrada: 0,
     },
     // Step 5
     checklist: [] as string[],
@@ -104,6 +110,9 @@ export default function EditarFestaPage() {
         tema: festaData.tema || "",
         local: festaData.local || "",
         status: festaData.status || "planejamento",
+        estimativa_convidados: festaData.estimativa_convidados || undefined,
+        quantidade_criancas: festaData.quantidade_criancas || undefined,
+        faixas_etarias: festaData.faixas_etarias || [],
         cliente_nome: festaData.cliente_nome || "",
         cliente_contato: festaData.cliente_contato || "",
         cliente_observacoes: festaData.cliente_observacoes || "",
@@ -112,6 +121,9 @@ export default function EditarFestaPage() {
           itens: orcamentoData?.itens || [],
           desconto: orcamentoData?.desconto || 0,
           acrescimo: orcamentoData?.acrescimo || 0,
+          forma_pagamento: (orcamentoData?.forma_pagamento as "avista" | "parcelado") || "avista",
+          quantidade_parcelas: orcamentoData?.quantidade_parcelas || 1,
+          entrada: orcamentoData?.entrada || 0,
         },
         checklist: checklistTarefas,
       });
@@ -184,6 +196,9 @@ export default function EditarFestaPage() {
           cliente_nome: formData.cliente_nome,
           cliente_contato: formData.cliente_contato,
           cliente_observacoes: formData.cliente_observacoes,
+          estimativa_convidados: formData.estimativa_convidados || null,
+          quantidade_criancas: formData.quantidade_criancas || null,
+          faixas_etarias: formData.faixas_etarias.length > 0 ? formData.faixas_etarias : null,
           status: formData.status,
         })
         .eq("id", params.id);

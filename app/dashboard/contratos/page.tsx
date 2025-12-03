@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText } from "lucide-react";
+import { ContratosList } from "@/components/contratos/contratos-list";
 
 export default function ContratosPage() {
   return (
@@ -10,28 +10,11 @@ export default function ContratosPage() {
           Contratos
         </h1>
         <p className="text-gray-500 mt-1">
-          Gerador de contratos com export para PDF
+          Visualize e gerencie todos os contratos gerados
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Gerador de Contratos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Em Desenvolvimento
-            </h3>
-            <p className="text-gray-600 max-w-md mx-auto">
-              O gerador de contratos personalizados com exportação para PDF
-              estará disponível em breve. Você poderá criar templates e
-              gerar contratos automaticamente para cada festa.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      <ContratosList />
     </div>
   );
 }

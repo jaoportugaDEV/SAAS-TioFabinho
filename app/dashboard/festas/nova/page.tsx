@@ -37,6 +37,9 @@ export default function NovaFestaPage() {
     tema: "",
     local: "",
     status: "planejamento" as const,
+    estimativa_convidados: undefined as number | undefined,
+    quantidade_criancas: undefined as number | undefined,
+    faixas_etarias: [] as string[],
     // Step 2
     cliente_nome: "",
     cliente_contato: "",
@@ -48,6 +51,9 @@ export default function NovaFestaPage() {
       itens: [] as Array<{ descricao: string; quantidade: number; valor_unitario: number }>,
       desconto: 0,
       acrescimo: 0,
+      forma_pagamento: "avista" as "avista" | "parcelado",
+      quantidade_parcelas: 1,
+      entrada: 0,
     },
     // Step 5
     checklist: [] as string[],
@@ -118,6 +124,9 @@ export default function NovaFestaPage() {
             cliente_nome: formData.cliente_nome,
             cliente_contato: formData.cliente_contato,
             cliente_observacoes: formData.cliente_observacoes,
+            estimativa_convidados: formData.estimativa_convidados || null,
+            quantidade_criancas: formData.quantidade_criancas || null,
+            faixas_etarias: formData.faixas_etarias.length > 0 ? formData.faixas_etarias : null,
             status: formData.status,
           },
         ])
@@ -174,7 +183,7 @@ export default function NovaFestaPage() {
         formData.orcamento.desconto +
         formData.orcamento.acrescimo;
 
-      const { error: orcamentoError } = await supabase
+      const { data: orcamentoData, error: orcamentoError } = await supabase
         .from("orcamentos")
         .insert([
           {
@@ -184,10 +193,46 @@ export default function NovaFestaPage() {
             acrescimo: formData.orcamento.acrescimo,
             total,
             status_pagamento: "pendente",
+            forma_pagamento: formData.orcamento.forma_pagamento,
+            quantidade_parcelas: formData.orcamento.quantidade_parcelas,
+            entrada: formData.orcamento.entrada,
           },
-        ]);
+        ])
+        .select()
+        .single();
 
       if (orcamentoError) throw orcamentoError;
+
+      // 3.1 Criar parcelas se for pagamento parcelado
+      if (formData.orcamento.forma_pagamento === "parcelado" && orcamentoData) {
+        const valorParcelar = total - formData.orcamento.entrada;
+        const valorParcela = valorParcelar / formData.orcamento.quantidade_parcelas;
+        const dataFesta = new Date(formData.data);
+        
+        const parcelas = [];
+        for (let i = 1; i <= formData.orcamento.quantidade_parcelas; i++) {
+          const dataVencimento = new Date(dataFesta);
+          dataVencimento.setMonth(dataVencimento.getMonth() + i - 1);
+          
+          parcelas.push({
+            orcamento_id: orcamentoData.id,
+            festa_id: festa.id,
+            numero_parcela: i,
+            valor: valorParcela,
+            data_vencimento: dataVencimento.toISOString().split('T')[0],
+            status: 'pendente' as const,
+          });
+        }
+
+        const { error: parcelasError } = await supabase
+          .from("parcelas_pagamento")
+          .insert(parcelas);
+
+        if (parcelasError) {
+          console.error("Erro ao criar parcelas:", parcelasError);
+          // Não bloqueia a criação da festa
+        }
+      }
 
       // 4. Criar checklist
       if (formData.checklist.length > 0) {

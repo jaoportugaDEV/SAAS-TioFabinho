@@ -44,6 +44,19 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
             </Button>
           </div>
 
+          {/* Logo centralizada - visível no mobile */}
+          <div className="flex lg:hidden absolute left-1/2 transform -translate-x-1/2">
+            <div className="w-10 h-10 relative">
+              <Image
+                src="/LogoFabinho.png"
+                alt="Tio Fabinho Buffet"
+                width={40}
+                height={40}
+                className="object-contain"
+              />
+            </div>
+          </div>
+
           <div className="flex items-center gap-4">
             {userEmail && (
               <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">

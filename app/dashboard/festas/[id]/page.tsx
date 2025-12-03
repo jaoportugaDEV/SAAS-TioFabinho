@@ -9,7 +9,7 @@ import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, User, Phone, Wallet, CheckCircle, Clock, DollarSign } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, User, Phone } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { StatusSelector } from "@/components/festas/status-selector";
 import { ChecklistManager } from "@/components/festas/checklist-manager";
@@ -17,20 +17,14 @@ import { FreelancerManager } from "@/components/festas/freelancer-manager";
 import { GaleriaFotos } from "@/components/festas/galeria-fotos";
 import { ContratoGenerator } from "@/components/festas/contrato-generator";
 import { DeleteFestaDialog } from "@/components/festas/delete-festa-dialog";
+import { PagamentoManager } from "@/components/festas/pagamento-manager";
 import { Pencil } from "lucide-react";
+import { CollapsibleSection } from "@/components/ui/collapsible-section";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   planejamento: { label: "Planejamento", color: "bg-blue-100 text-blue-800" },
   confirmada: { label: "Confirmada", color: "bg-green-100 text-green-800" },
-  em_andamento: { label: "Em Andamento", color: "bg-yellow-100 text-yellow-800" },
   concluida: { label: "Concluída", color: "bg-gray-100 text-gray-800" },
-  cancelada: { label: "Cancelada", color: "bg-red-100 text-red-800" },
-};
-
-const statusPagamentoLabels: Record<string, { label: string; color: string; icon: any }> = {
-  pendente: { label: "Pendente", color: "bg-red-100 text-red-800", icon: Clock },
-  parcial: { label: "Parcial", color: "bg-yellow-100 text-yellow-800", icon: Wallet },
-  pago: { label: "Completo", color: "bg-green-100 text-green-800", icon: CheckCircle },
 };
 
 export default function DetalheFestaPage() {
@@ -174,46 +168,95 @@ export default function DetalheFestaPage() {
 
       {/* Informações Principais */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Informações da Festa */}
+        {/* Informações da Festa e Convidados */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Informações da Festa</CardTitle>
+            <CardTitle>Detalhes da Festa</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex items-start gap-3">
-                <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                <div>
-                  <p className="text-sm text-gray-500">Data e Horário</p>
-                  <p className="font-medium">
-                    {formatDate(festa.data)}
-                    {festa.horario && (
-                      <span className="text-gray-600"> às {festa.horario}</span>
-                    )}
-                  </p>
+          <CardContent className="space-y-2">
+            {/* Seção: Informações Básicas */}
+            <CollapsibleSection title="Informações Básicas" defaultOpen={true}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3">
+                  <Calendar className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Data e Horário</p>
+                    <p className="font-medium">
+                      {formatDate(festa.data)}
+                      {festa.horario && (
+                        <span className="text-gray-600"> às {festa.horario}</span>
+                      )}
+                    </p>
+                  </div>
                 </div>
+
+                {festa.tema && (
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl mt-0.5">🎨</span>
+                    <div>
+                      <p className="text-sm text-gray-500">Tema</p>
+                      <p className="font-medium">{festa.tema}</p>
+                    </div>
+                  </div>
+                )}
+
+                {festa.local && (
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-5 h-5 text-primary mt-0.5" />
+                    <div>
+                      <p className="text-sm text-gray-500">Local</p>
+                      <p className="font-medium">{festa.local}</p>
+                    </div>
+                  </div>
+                )}
               </div>
+            </CollapsibleSection>
 
-              {festa.tema && (
-                <div className="flex items-start gap-3">
-                  <span className="text-xl mt-0.5">🎨</span>
-                  <div>
-                    <p className="text-sm text-gray-500">Tema</p>
-                    <p className="font-medium">{festa.tema}</p>
-                  </div>
-                </div>
-              )}
+            {/* Seção: Informações dos Convidados */}
+            {(festa.estimativa_convidados || festa.quantidade_criancas || (festa.faixas_etarias && festa.faixas_etarias.length > 0)) && (
+              <CollapsibleSection title="Informações dos Convidados" defaultOpen={false}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {festa.estimativa_convidados && (
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl mt-0.5">👥</span>
+                      <div>
+                        <p className="text-sm text-gray-500">Estimativa de Convidados</p>
+                        <p className="font-medium">{festa.estimativa_convidados}</p>
+                      </div>
+                    </div>
+                  )}
 
-              {festa.local && (
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-5 h-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Local</p>
-                    <p className="font-medium">{festa.local}</p>
-                  </div>
+                  {festa.quantidade_criancas && (
+                    <div className="flex items-start gap-3">
+                      <span className="text-xl mt-0.5">👶</span>
+                      <div>
+                        <p className="text-sm text-gray-500">Quantidade de Crianças</p>
+                        <p className="font-medium">{festa.quantidade_criancas}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {festa.faixas_etarias && festa.faixas_etarias.length > 0 && (
+                    <div className="flex items-start gap-3 sm:col-span-2">
+                      <span className="text-xl mt-0.5">🎂</span>
+                      <div className="flex-1">
+                        <p className="text-sm text-gray-500 mb-2">Faixas Etárias</p>
+                        <div className="flex flex-wrap gap-2">
+                          {festa.faixas_etarias.map((faixa) => (
+                            <Badge key={faixa} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {faixa === "0-5" && "0-5 anos"}
+                              {faixa === "6-12" && "6-12 anos"}
+                              {faixa === "13-17" && "13-17 anos"}
+                              {faixa === "18+" && "18+"}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
+              </CollapsibleSection>
+            )}
           </CardContent>
         </Card>
 
@@ -222,69 +265,41 @@ export default function DetalheFestaPage() {
           <CardHeader>
             <CardTitle>Cliente</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3">
-              <User className="w-5 h-5 text-primary mt-0.5" />
-              <div>
-                <p className="text-sm text-gray-500">Nome</p>
-                <p className="font-medium">{festa.cliente_nome}</p>
-              </div>
-            </div>
+          <CardContent>
+            <CollapsibleSection title="Dados de Contato" defaultOpen={true}>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <User className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Nome</p>
+                    <p className="font-medium">{festa.cliente_nome}</p>
+                  </div>
+                </div>
 
-            <div className="flex items-start gap-3">
-              <Phone className="w-5 h-5 text-primary mt-0.5" />
-              <div>
-                <p className="text-sm text-gray-500">Contato</p>
-                <p className="font-medium">{festa.cliente_contato}</p>
-              </div>
-            </div>
+                <div className="flex items-start gap-3">
+                  <Phone className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="text-sm text-gray-500">Contato</p>
+                    <p className="font-medium">{festa.cliente_contato}</p>
+                  </div>
+                </div>
 
-            {festa.cliente_observacoes && (
-              <div>
-                <p className="text-sm text-gray-500 mb-1">Observações</p>
-                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
-                  {festa.cliente_observacoes}
-                </p>
+                {festa.cliente_observacoes && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Observações</p>
+                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
+                      {festa.cliente_observacoes}
+                    </p>
+                  </div>
+                )}
               </div>
-            )}
+            </CollapsibleSection>
           </CardContent>
         </Card>
       </div>
 
-      {/* Orçamento */}
-      {orcamento && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <span>💰</span>
-              Orçamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total</p>
-                <p className="text-2xl font-bold text-primary">
-                  R$ {Number(orcamento.total).toFixed(2)}
-                </p>
-              </div>
-              <Badge className={
-                orcamento.status_pagamento === "pago_total"
-                  ? "bg-green-100 text-green-800"
-                  : orcamento.status_pagamento === "pago_parcial"
-                  ? "bg-yellow-100 text-yellow-800"
-                  : "bg-red-100 text-red-800"
-              }>
-                {orcamento.status_pagamento === "pago_total"
-                  ? "Pago"
-                  : orcamento.status_pagamento === "pago_parcial"
-                  ? "Pago Parcial"
-                  : "Pendente"}
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Gerenciamento de Pagamentos */}
+      <PagamentoManager festaId={festa.id} orcamento={orcamento} />
 
       {/* Gerenciamento de Freelancers */}
       <FreelancerManager
@@ -293,98 +308,6 @@ export default function DetalheFestaPage() {
         festaFreelancers={festaFreelancers}
         availableFreelancers={availableFreelancers}
       />
-
-      {/* Seção de Pagamentos */}
-      {festaFreelancers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span className="flex items-center gap-2">
-                <Wallet className="w-5 h-5" />
-                Pagamentos de Freelancers
-              </span>
-              {festa.status_pagamento_freelancers && (
-                <Badge className={statusPagamentoLabels[festa.status_pagamento_freelancers]?.color || 'bg-gray-100 text-gray-800'}>
-                  {(() => {
-                    const Icon = statusPagamentoLabels[festa.status_pagamento_freelancers]?.icon;
-                    return Icon ? <Icon className="w-4 h-4 mr-1" /> : null;
-                  })()}
-                  {statusPagamentoLabels[festa.status_pagamento_freelancers]?.label || 'Status Desconhecido'}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {festaFreelancers.map((ff) => {
-                const isPago = ff.status_pagamento === "pago";
-                return (
-                  <div
-                    key={ff.id}
-                    className={`flex items-center justify-between p-4 rounded-lg border-2 ${
-                      isPago
-                        ? "bg-green-50 border-green-200"
-                        : "bg-gray-50 border-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                          isPago ? "bg-green-500" : "bg-gray-300"
-                        }`}
-                      >
-                        {isPago ? (
-                          <CheckCircle className="w-6 h-6 text-white" />
-                        ) : (
-                          <Clock className="w-6 h-6 text-white" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-semibold">{ff.freelancer.nome}</p>
-                        <p className="text-sm text-gray-600">
-                          {isPago ? "Pagamento confirmado" : "Pagamento pendente"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-5 h-5 text-green-600" />
-                        <p className="text-xl font-bold text-green-600">
-                          {formatCurrency(ff.valor_acordado || 0)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* Total */}
-              <div className="pt-3 border-t-2 border-gray-200">
-                <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
-                  <p className="text-lg font-semibold text-gray-900">Total de Pagamentos</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {formatCurrency(
-                      festaFreelancers.reduce((acc, ff) => acc + (ff.valor_acordado || 0), 0)
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              {/* Link para página de pagamentos se houver pendências */}
-              {festa.status_pagamento_freelancers !== "pago" && (
-                <div className="pt-3">
-                  <Link href="/dashboard/pagamentos">
-                    <Button className="w-full gap-2" variant="outline">
-                      <Wallet className="w-4 h-4" />
-                      Ir para Pagamentos Pendentes
-                    </Button>
-                  </Link>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Checklist */}
       <ChecklistManager festaId={festa.id} items={checklist} />

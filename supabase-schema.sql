@@ -5,6 +5,7 @@
 CREATE TYPE funcao_freelancer AS ENUM ('monitor', 'cozinheira', 'fotografo', 'garcom', 'recepcao', 'outros');
 CREATE TYPE status_festa AS ENUM ('planejamento', 'confirmada', 'em_andamento', 'concluida', 'cancelada');
 CREATE TYPE status_pagamento AS ENUM ('pendente', 'pago_parcial', 'pago_total');
+CREATE TYPE status_parcela AS ENUM ('pendente', 'paga', 'atrasada');
 CREATE TYPE categoria_despesa AS ENUM ('freelancer', 'material', 'aluguel', 'outros');
 
 -- Tabela de Freelancers
@@ -69,6 +70,24 @@ CREATE TABLE IF NOT EXISTS orcamentos (
   acrescimo DECIMAL(10,2) DEFAULT 0,
   total DECIMAL(10,2) NOT NULL,
   status_pagamento status_pagamento DEFAULT 'pendente',
+  forma_pagamento VARCHAR(20) DEFAULT 'avista',
+  quantidade_parcelas INTEGER DEFAULT 1,
+  entrada DECIMAL(10,2) DEFAULT 0,
+  observacoes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Tabela de Parcelas de Pagamento
+CREATE TABLE IF NOT EXISTS parcelas_pagamento (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  orcamento_id UUID NOT NULL REFERENCES orcamentos(id) ON DELETE CASCADE,
+  festa_id UUID NOT NULL REFERENCES festas(id) ON DELETE CASCADE,
+  numero_parcela INTEGER NOT NULL,
+  valor DECIMAL(10,2) NOT NULL,
+  data_vencimento DATE NOT NULL,
+  data_pagamento DATE,
+  status status_parcela DEFAULT 'pendente',
+  metodo_pagamento VARCHAR(50),
   observacoes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -127,6 +146,10 @@ CREATE INDEX idx_festa_fotos_festa ON festa_fotos(festa_id);
 CREATE INDEX idx_checklist_festa ON checklist(festa_id);
 CREATE INDEX idx_pagamentos_freelancers_festa ON pagamentos_freelancers(festa_id);
 CREATE INDEX idx_despesas_festas_festa ON despesas_festas(festa_id);
+CREATE INDEX idx_parcelas_orcamento ON parcelas_pagamento(orcamento_id);
+CREATE INDEX idx_parcelas_festa ON parcelas_pagamento(festa_id);
+CREATE INDEX idx_parcelas_vencimento ON parcelas_pagamento(data_vencimento);
+CREATE INDEX idx_parcelas_status ON parcelas_pagamento(status);
 
 -- Habilitar Row Level Security (RLS) em todas as tabelas
 ALTER TABLE freelancers ENABLE ROW LEVEL SECURITY;
@@ -135,6 +158,7 @@ ALTER TABLE festa_freelancers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE festa_fotos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE contratos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orcamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE parcelas_pagamento ENABLE ROW LEVEL SECURITY;
 ALTER TABLE checklist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pagamentos_freelancers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mensagens_whatsapp ENABLE ROW LEVEL SECURITY;
@@ -165,6 +189,10 @@ CREATE POLICY "Permitir acesso completo para usuários autenticados"
 
 CREATE POLICY "Permitir acesso completo para usuários autenticados"
   ON orcamentos FOR ALL
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Permitir acesso completo para usuários autenticados"
+  ON parcelas_pagamento FOR ALL
   USING (auth.role() = 'authenticated');
 
 CREATE POLICY "Permitir acesso completo para usuários autenticados"

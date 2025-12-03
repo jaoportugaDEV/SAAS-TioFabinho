@@ -6,8 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle, DollarSign } from "lucide-react";
-import { formatPhone, whatsappLink, formatCurrency } from "@/lib/utils";
+import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle } from "lucide-react";
+import { formatPhone, whatsappLink } from "@/lib/utils";
 import {
   addFreelancerToFesta,
   removeFreelancerFromFesta,
@@ -310,20 +310,6 @@ export function FreelancerManager({
                           </>
                         )}
                       </Badge>
-                    </div>
-                    
-                    {/* Valor Acordado */}
-                    <div className="mt-3 p-2 bg-green-50 rounded-md border border-green-200">
-                      <div className="flex items-center gap-2">
-                        <DollarSign className="w-4 h-4 text-green-600" />
-                        <span className="text-xs text-gray-600">Valor:</span>
-                        <span className="text-sm font-bold text-green-600">
-                          {formatCurrency(festaFreelancer.valor_acordado || 0)}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Valor fixo da função {funcaoLabels[festaFreelancer.freelancer.funcao]}
-                      </p>
                     </div>
                   </div>
                   

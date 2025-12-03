@@ -1,8 +1,12 @@
 export type FuncaoFreelancer = 'monitor' | 'cozinheira' | 'fotografo' | 'garcom' | 'recepcao' | 'outros';
 
-export type StatusFesta = 'planejamento' | 'confirmada' | 'em_andamento' | 'concluida' | 'cancelada';
+export type StatusFesta = 'planejamento' | 'confirmada' | 'concluida';
 
 export type StatusPagamento = 'pendente' | 'pago_parcial' | 'pago_total';
+
+export type StatusParcela = 'pendente' | 'paga' | 'atrasada';
+
+export type FormaPagamento = 'avista' | 'parcelado';
 
 export type StatusPagamentoFreelancers = 'pendente' | 'parcial' | 'pago';
 
@@ -34,6 +38,9 @@ export interface Festa {
   cliente_nome: string;
   cliente_contato: string;
   cliente_observacoes?: string;
+  estimativa_convidados?: number;
+  quantidade_criancas?: number;
+  faixas_etarias?: string[];
   status: StatusFesta;
   status_pagamento_freelancers: StatusPagamentoFreelancers;
   created_at: string;
@@ -78,7 +85,24 @@ export interface Orcamento {
   acrescimo: number;
   total: number;
   status_pagamento: StatusPagamento;
+  forma_pagamento: FormaPagamento;
+  quantidade_parcelas: number;
+  entrada: number;
   observacoes?: string;
+  created_at: string;
+}
+
+export interface ParcelaPagamento {
+  id: string;
+  orcamento_id: string;
+  festa_id: string;
+  numero_parcela: number;
+  valor: number;
+  data_vencimento: string;
+  data_pagamento?: string | null;
+  status: StatusParcela;
+  metodo_pagamento?: string | null;
+  observacoes?: string | null;
   created_at: string;
 }
 
@@ -119,5 +143,15 @@ export interface DespesaFesta {
   valor: number;
   categoria: 'freelancer' | 'material' | 'aluguel' | 'outros';
   data: string;
+}
+
+export interface DespesaGeral {
+  id: string;
+  descricao: string;
+  valor: number;
+  data: string;
+  categoria?: string;
+  observacoes?: string;
+  created_at: string;
 }
 

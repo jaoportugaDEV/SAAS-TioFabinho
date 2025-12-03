@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import { formatDate } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 interface ContratoGeneratorProps {
   festa: Festa;
@@ -15,6 +16,48 @@ interface ContratoGeneratorProps {
 
 export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) {
   const [generating, setGenerating] = useState(false);
+  const supabase = createClient();
+
+  // Função para gerar o HTML do contrato
+  const generateContractHTML = (): string => {
+    const numeroContrato = `CTR-${festa.id.substring(0, 8).toUpperCase()}`;
+    const valorFormatado = orcamento 
+      ? Number(orcamento.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+      : "N/A";
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head><title>Contrato ${numeroContrato}</title></head>
+      <body>
+        <h1>TIO FABINHO BUFFET</h1>
+        <h2>Contrato de Prestação de Serviços</h2>
+        <p><strong>Contrato Nº:</strong> ${numeroContrato}</p>
+        <p><strong>Data de Emissão:</strong> ${formatDate(new Date().toISOString())}</p>
+        
+        <h3>CONTRATANTE:</h3>
+        <p>Nome: ${festa.cliente_nome}</p>
+        <p>Contato: ${festa.cliente_contato}</p>
+        
+        <h3>CONTRATADO:</h3>
+        <p>Nome: Tio Fabinho Buffet</p>
+        <p>Endereço: Presidente Prudente - SP</p>
+        
+        <h3>OBJETO DO CONTRATO:</h3>
+        <p>Evento: ${festa.titulo}</p>
+        <p>Data do Evento: ${formatDate(festa.data)}${festa.horario ? ` às ${festa.horario}` : ""}</p>
+        ${festa.tema ? `<p>Tema: ${festa.tema}</p>` : ""}
+        ${festa.local ? `<p>Local: ${festa.local}</p>` : ""}
+        
+        ${orcamento ? `
+        <h3>VALOR DO CONTRATO:</h3>
+        <p>Valor Total: ${valorFormatado}</p>
+        <p>Status: ${orcamento.status_pagamento === "pago_total" ? "Pago" : "Pendente"}</p>
+        ` : ""}
+      </body>
+      </html>
+    `;
+  };
 
   const generatePDF = async () => {
     setGenerating(true);
@@ -188,6 +231,23 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
 
       // Salvar PDF
       doc.save(`Contrato_${festa.titulo.replace(/\s+/g, "_")}_${numeroContrato}.pdf`);
+
+      // Salvar registro do contrato no banco de dados
+      const templateHTML = generateContractHTML();
+      const { error: contratoError } = await supabase
+        .from("contratos")
+        .insert([
+          {
+            festa_id: festa.id,
+            template_html: templateHTML,
+            pdf_url: null, // Por enquanto não estamos fazendo upload do PDF
+          },
+        ]);
+
+      if (contratoError) {
+        console.error("Erro ao salvar contrato no banco:", contratoError);
+        // Não bloquear a geração do PDF se houver erro ao salvar
+      }
 
       alert("Contrato gerado com sucesso!");
     } catch (error) {
