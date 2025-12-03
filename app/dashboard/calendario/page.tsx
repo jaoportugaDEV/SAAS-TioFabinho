@@ -74,6 +74,8 @@ export default function CalendarioPage() {
     monitor: "Monitor",
     cozinheira: "Cozinheira",
     fotografo: "Fotógrafo",
+    garcom: "Garçom",
+    recepcao: "Recepção",
     outros: "Outros",
   };
 

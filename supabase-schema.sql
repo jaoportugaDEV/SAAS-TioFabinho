@@ -2,7 +2,7 @@
 -- Execute este script no SQL Editor do Supabase
 
 -- Criar tipos ENUM
-CREATE TYPE funcao_freelancer AS ENUM ('monitor', 'cozinheira', 'fotografo', 'outros');
+CREATE TYPE funcao_freelancer AS ENUM ('monitor', 'cozinheira', 'fotografo', 'garcom', 'recepcao', 'outros');
 CREATE TYPE status_festa AS ENUM ('planejamento', 'confirmada', 'em_andamento', 'concluida', 'cancelada');
 CREATE TYPE status_pagamento AS ENUM ('pendente', 'pago_parcial', 'pago_total');
 CREATE TYPE categoria_despesa AS ENUM ('freelancer', 'material', 'aluguel', 'outros');

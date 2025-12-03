@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone } from "lucide-react";
+import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle } from "lucide-react";
 import { formatPhone, whatsappLink } from "@/lib/utils";
 import {
   addFreelancerToFesta,
@@ -16,6 +16,7 @@ import {
 
 interface FreelancerManagerProps {
   festaId: string;
+  festaData: string; // Data da festa no formato ISO (YYYY-MM-DD)
   festaFreelancers: (FestaFreelancer & { freelancer: Freelancer })[];
   availableFreelancers: Freelancer[];
 }
@@ -24,6 +25,8 @@ const funcaoLabels: Record<string, string> = {
   monitor: "Monitor",
   cozinheira: "Cozinheira",
   fotografo: "Fotógrafo",
+  garcom: "Garçom",
+  recepcao: "Recepção",
   outros: "Outros",
 };
 
@@ -31,11 +34,14 @@ const funcaoColors: Record<string, string> = {
   monitor: "bg-blue-100 text-blue-800",
   cozinheira: "bg-purple-100 text-purple-800",
   fotografo: "bg-green-100 text-green-800",
+  garcom: "bg-orange-100 text-orange-800",
+  recepcao: "bg-pink-100 text-pink-800",
   outros: "bg-gray-100 text-gray-800",
 };
 
 export function FreelancerManager({
   festaId,
+  festaData,
   festaFreelancers: initialFestaFreelancers,
   availableFreelancers: initialAvailableFreelancers,
 }: FreelancerManagerProps) {
@@ -43,6 +49,21 @@ export function FreelancerManager({
   const [availableFreelancers, setAvailableFreelancers] = useState(initialAvailableFreelancers);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Verifica se o freelancer está disponível na data da festa
+  const isAvailable = (freelancer: Freelancer): boolean => {
+    if (!festaData) return true;
+    
+    // Se o freelancer usa o sistema de dias da semana
+    if (freelancer.dias_semana_disponiveis && freelancer.dias_semana_disponiveis.length > 0) {
+      // Pegar o dia da semana da data da festa (0=Domingo, 6=Sábado)
+      const diaSemanaFesta = new Date(festaData + "T00:00:00").getDay();
+      return freelancer.dias_semana_disponiveis.includes(diaSemanaFesta);
+    }
+    
+    // Fallback para o sistema antigo de datas exatas (compatibilidade)
+    return freelancer.dias_disponiveis?.includes(festaData) || false;
+  };
 
   const handleAddFreelancer = async (freelancerId: string) => {
     setLoading(true);
@@ -140,62 +161,84 @@ export function FreelancerManager({
               </p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {availableFreelancers.map((freelancer) => (
-                  <div
-                    key={freelancer.id}
-                    className="flex items-start gap-3 p-4 rounded-lg border bg-white hover:shadow-md transition-all"
-                  >
-                    <Avatar className="w-14 h-14">
-                      {freelancer.foto_url ? (
-                        <AvatarImage 
-                          src={freelancer.foto_url} 
-                          alt={freelancer.nome}
-                          className="object-cover"
-                        />
-                      ) : (
-                        <AvatarFallback className="bg-primary text-white text-lg font-semibold">
-                          {freelancer.nome.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <div>
-                        <p className="font-semibold text-base truncate">{freelancer.nome}</p>
-                        <Badge className={funcaoColors[freelancer.funcao] + " text-xs mt-1"}>
-                          {funcaoLabels[freelancer.funcao]}
-                        </Badge>
-                      </div>
+                {availableFreelancers.map((freelancer) => {
+                  const disponivel = isAvailable(freelancer);
+                  
+                  return (
+                    <div
+                      key={freelancer.id}
+                      className={`flex items-start gap-3 p-4 rounded-lg border bg-white hover:shadow-md transition-all ${
+                        !disponivel ? "border-orange-200 bg-orange-50" : ""
+                      }`}
+                    >
+                      <Avatar className="w-14 h-14">
+                        {freelancer.foto_url ? (
+                          <AvatarImage 
+                            src={freelancer.foto_url} 
+                            alt={freelancer.nome}
+                            className="object-cover"
+                          />
+                        ) : (
+                          <AvatarFallback className="bg-primary text-white text-lg font-semibold">
+                            {freelancer.nome.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        )}
+                      </Avatar>
                       
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Phone className="w-3 h-3" />
-                        <span className="text-xs">{formatPhone(freelancer.whatsapp)}</span>
-                      </div>
-                      
-                      <div className="flex gap-2 pt-1">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
-                          onClick={() => window.open(whatsappLink(freelancer.whatsapp), "_blank")}
-                          title="Enviar mensagem no WhatsApp"
-                        >
-                          <MessageCircle className="w-3 h-3" />
-                          <span className="text-xs">WhatsApp</span>
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAddFreelancer(freelancer.id)}
-                          disabled={loading}
-                          className="flex-1 gap-1"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span className="text-xs">Adicionar</span>
-                        </Button>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div>
+                          <p className="font-semibold text-base truncate">{freelancer.nome}</p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            <Badge className={funcaoColors[freelancer.funcao] + " text-xs"}>
+                              {funcaoLabels[freelancer.funcao]}
+                            </Badge>
+                            {!disponivel && (
+                              <Badge className="bg-orange-100 text-orange-800 text-xs">
+                                <AlertTriangle className="w-3 h-3 mr-1" />
+                                Não Disponível
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <Phone className="w-3 h-3" />
+                          <span className="text-xs">{formatPhone(freelancer.whatsapp)}</span>
+                        </div>
+                        
+                        {!disponivel && (
+                          <div className="bg-orange-100 border border-orange-200 rounded-md p-2 text-xs text-orange-800">
+                            <p className="font-medium">⚠️ Este freelancer não marcou disponibilidade para esta data.</p>
+                            <p className="mt-1">Você ainda pode contactar via WhatsApp e adicionar se confirmar.</p>
+                          </div>
+                        )}
+                        
+                        <div className="flex gap-2 pt-1">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                            onClick={() => window.open(whatsappLink(freelancer.whatsapp), "_blank")}
+                            title="Enviar mensagem no WhatsApp"
+                          >
+                            <MessageCircle className="w-3 h-3" />
+                            <span className="text-xs">WhatsApp</span>
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={() => handleAddFreelancer(freelancer.id)}
+                            disabled={loading}
+                            className="flex-1 gap-1"
+                            title={!disponivel ? "Adicionar mesmo assim (verifique disponibilidade antes)" : "Adicionar freelancer"}
+                          >
+                            <Plus className="w-3 h-3" />
+                            <span className="text-xs">Adicionar</span>
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

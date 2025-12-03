@@ -1,4 +1,4 @@
-export type FuncaoFreelancer = 'monitor' | 'cozinheira' | 'fotografo' | 'outros';
+export type FuncaoFreelancer = 'monitor' | 'cozinheira' | 'fotografo' | 'garcom' | 'recepcao' | 'outros';
 
 export type StatusFesta = 'planejamento' | 'confirmada' | 'em_andamento' | 'concluida' | 'cancelada';
 

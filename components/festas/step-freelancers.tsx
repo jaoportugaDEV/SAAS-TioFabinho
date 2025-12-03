@@ -17,6 +17,8 @@ const funcaoLabels: Record<string, string> = {
   monitor: "Monitor",
   cozinheira: "Cozinheira",
   fotografo: "Fotógrafo",
+  garcom: "Garçom",
+  recepcao: "Recepção",
   outros: "Outros",
 };
 

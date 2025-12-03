@@ -29,7 +29,7 @@ Sistema web completo para gerenciamento de festas infantis, controle de equipe f
 
 ### 👥 Gestão de Freelancers
 - ✅ Cadastro completo com foto
-- ✅ Funções: Monitores, Cozinheiras, Fotógrafos, Outros
+- ✅ Funções: Monitores, Cozinheiras, Fotógrafos, Garçons, Recepção, Outros
 - ✅ Gerenciamento de dias disponíveis por freelancer
 - ✅ Controle de ativos/inativos
 - ✅ Informações de contato (WhatsApp, PIX)

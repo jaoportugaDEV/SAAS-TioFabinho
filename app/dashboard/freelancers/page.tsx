@@ -16,6 +16,8 @@ const funcaoLabels: Record<string, string> = {
   monitor: "Monitor",
   cozinheira: "Cozinheira",
   fotografo: "Fotógrafo",
+  garcom: "Garçom",
+  recepcao: "Recepção",
   outros: "Outros",
 };
 
@@ -86,7 +88,7 @@ export default function FreelancersPage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Freelancers</h1>
           <p className="text-gray-500 mt-1">
-            Gerencie sua equipe de monitores, cozinheiras e fotógrafos
+            Gerencie sua equipe de monitores, cozinheiras, fotógrafos, garçons e recepcionistas
           </p>
         </div>
         <Link href="/dashboard/freelancers/novo">

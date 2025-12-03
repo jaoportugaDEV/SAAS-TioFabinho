@@ -43,7 +43,7 @@ Após o login, você verá:
 3. Preencha:
    - **Foto**: Clique em "Escolher Foto" para adicionar uma imagem
    - **Nome Completo**: Digite o nome do freelancer
-   - **Função**: Selecione (Monitor, Cozinheira, Fotógrafo, Outros)
+   - **Função**: Selecione (Monitor, Cozinheira, Fotógrafo, Garçom, Recepção, Outros)
    - **WhatsApp**: Digite o número com DDD
    - **Chave PIX**: Para pagamentos
    - **Ativo**: Marque se está ativo

@@ -282,6 +282,7 @@ export default function DetalheFestaPage() {
       {/* Gerenciamento de Freelancers */}
       <FreelancerManager
         festaId={festa.id}
+        festaData={festa.data}
         festaFreelancers={festaFreelancers}
         availableFreelancers={availableFreelancers}
       />

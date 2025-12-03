@@ -210,7 +210,7 @@ export default function DashboardPage() {
             Este é seu sistema completo de gestão de festas. Comece por:
           </p>
           <ul className="list-disc list-inside space-y-2 text-gray-600">
-            <li>Cadastrar seus <strong>freelancers</strong> (monitores, cozinheiras, fotógrafos)</li>
+            <li>Cadastrar seus <strong>freelancers</strong> (monitores, cozinheiras, fotógrafos, garçons, recepcionistas)</li>
             <li>Criar suas primeiras <strong>festas</strong></li>
             <li>Gerar <strong>contratos e orçamentos</strong></li>
             <li>Controlar o <strong>financeiro</strong></li>
