@@ -22,3 +22,5 @@ JOIN festas f ON f.id = p.festa_id
 ORDER BY p.created_at DESC
 LIMIT 10;
 
+
+

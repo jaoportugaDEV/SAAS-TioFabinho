@@ -85,3 +85,5 @@ FROM parcelas_pagamento;
 -- está tudo certo! Agora teste criar uma festa no aplicativo.
 -- ===================================================================
 
+
+

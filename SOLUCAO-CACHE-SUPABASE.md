@@ -112,3 +112,5 @@ Depois de executar uma das soluções, me avise:
 - ✅ Funcionou! As festas são criadas normalmente
 - ❌ Ainda dá erro (me mande o novo erro se houver)
 
+
+
