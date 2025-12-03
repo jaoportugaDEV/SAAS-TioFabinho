@@ -35,7 +35,50 @@ export async function marcarPagamentoComoRealizado(
 ) {
   const supabase = await createClient();
 
-  // Atualizar status de pagamento do freelancer
+  // Buscar o valor acordado do freelancer
+  const { data: festaFreelancer, error: fetchError } = await supabase
+    .from("festa_freelancers")
+    .select("valor_acordado")
+    .eq("festa_id", festaId)
+    .eq("freelancer_id", freelancerId)
+    .single();
+
+  if (fetchError || !festaFreelancer) {
+    console.error("Erro ao buscar valor acordado:", fetchError);
+    return { success: false, error: fetchError?.message || "Freelancer não encontrado" };
+  }
+
+  if (pago) {
+    // Marcar como pago: criar registro na tabela pagamentos_freelancers
+    const { error: pagamentoError } = await supabase
+      .from("pagamentos_freelancers")
+      .insert({
+        festa_id: festaId,
+        freelancer_id: freelancerId,
+        valor: festaFreelancer.valor_acordado || 0,
+        data_pagamento: new Date().toISOString().split('T')[0], // Data de hoje
+        observacoes: "Pagamento registrado via sistema"
+      });
+
+    if (pagamentoError) {
+      console.error("Erro ao criar registro de pagamento:", pagamentoError);
+      return { success: false, error: pagamentoError.message };
+    }
+  } else {
+    // Desmarcar como pago: remover registro da tabela pagamentos_freelancers
+    const { error: deleteError } = await supabase
+      .from("pagamentos_freelancers")
+      .delete()
+      .eq("festa_id", festaId)
+      .eq("freelancer_id", freelancerId);
+
+    if (deleteError) {
+      console.error("Erro ao remover registro de pagamento:", deleteError);
+      return { success: false, error: deleteError.message };
+    }
+  }
+
+  // Atualizar status de pagamento do freelancer na festa
   const { error: updateError } = await supabase
     .from("festa_freelancers")
     .update({ status_pagamento: pago ? "pago" : "pendente" })
@@ -43,7 +86,7 @@ export async function marcarPagamentoComoRealizado(
     .eq("freelancer_id", freelancerId);
 
   if (updateError) {
-    console.error("Erro ao atualizar pagamento:", updateError);
+    console.error("Erro ao atualizar status de pagamento:", updateError);
     return { success: false, error: updateError.message };
   }
 
@@ -52,6 +95,7 @@ export async function marcarPagamentoComoRealizado(
 
   revalidatePath(`/dashboard/festas/${festaId}`);
   revalidatePath("/dashboard/pagamentos");
+  revalidatePath("/dashboard/financeiro");
   return { success: true };
 }
 

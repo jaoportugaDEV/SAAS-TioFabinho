@@ -1,15 +1,28 @@
+import Image from "next/image";
+
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   const sizes = {
-    sm: "w-8 h-8 text-base",
-    md: "w-12 h-12 text-xl",
-    lg: "w-20 h-20 text-4xl",
+    sm: "w-8 h-8",
+    md: "w-12 h-12",
+    lg: "w-20 h-20",
+  };
+
+  const pixelSizes = {
+    sm: 32,
+    md: 48,
+    lg: 80,
   };
 
   return (
-    <div
-      className={`${sizes[size]} bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg`}
-    >
-      <span className="font-bold text-white">TF</span>
+    <div className={`${sizes[size]} relative`}>
+      <Image
+        src="/LogoFabinho.png"
+        alt="Tio Fabinho Buffet"
+        width={pixelSizes[size]}
+        height={pixelSizes[size]}
+        className="object-contain"
+        priority
+      />
     </div>
   );
 }

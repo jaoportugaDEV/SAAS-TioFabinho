@@ -97,10 +97,10 @@ export async function deleteChecklistItem(itemId: string, festaId: string) {
 export async function addFreelancerToFesta(festaId: string, freelancerId: string) {
   const supabase = await createClient();
 
-  // Buscar o valor padrão do freelancer
+  // Buscar a função do freelancer
   const { data: freelancer, error: freelancerError } = await supabase
     .from("freelancers")
-    .select("valor_padrao")
+    .select("funcao")
     .eq("id", freelancerId)
     .single();
 
@@ -109,13 +109,25 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
     return { success: false, error: freelancerError.message };
   }
 
-  // Inserir com o valor padrão
+  // Buscar o valor configurado para essa função
+  const { data: valorFuncao, error: valorError } = await supabase
+    .from("valores_funcoes")
+    .select("valor")
+    .eq("funcao", freelancer.funcao)
+    .single();
+
+  if (valorError) {
+    console.error("Erro ao buscar valor da função:", valorError);
+    // Se não encontrar, usa 0 como fallback
+  }
+
+  // Inserir com o valor da função
   const { error } = await supabase
     .from("festa_freelancers")
     .insert({
       festa_id: festaId,
       freelancer_id: freelancerId,
-      valor_acordado: freelancer.valor_padrao || 0,
+      valor_acordado: valorFuncao?.valor || 0,
       status_pagamento: 'pendente',
     });
 

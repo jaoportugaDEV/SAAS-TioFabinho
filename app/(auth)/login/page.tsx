@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,8 +48,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 p-4">
       <Card className="w-full max-w-md shadow-xl">
         <CardHeader className="space-y-3 text-center">
-          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-xl mb-2">
-            <span className="text-4xl font-bold text-white">TF</span>
+          <div className="mx-auto w-32 h-32 relative mb-4">
+            <Image
+              src="/LogoFabinho.png"
+              alt="Tio Fabinho Buffet"
+              width={128}
+              height={128}
+              className="object-contain"
+              priority
+            />
           </div>
           <CardTitle className="text-3xl font-bold text-primary">
             Tio Fabinho Buffet

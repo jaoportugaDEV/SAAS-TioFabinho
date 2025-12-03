@@ -12,7 +12,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Upload, Save, Calendar as CalendarIcon } from "lucide-react";
 import Link from "next/link";
-import { VALORES_PADRAO_POR_FUNCAO } from "@/lib/constants";
 
 export default function EditarFreelancerPage() {
   const params = useParams();
@@ -26,10 +25,17 @@ export default function EditarFreelancerPage() {
   const [fotoUrl, setFotoUrl] = useState<string>("");
   const [diasSemana, setDiasSemana] = useState<number[]>([]);
   const [funcaoAnterior, setFuncaoAnterior] = useState<string>("");
+  const [valorFuncao, setValorFuncao] = useState<number>(0);
 
   useEffect(() => {
     loadFreelancer();
   }, [params.id]);
+
+  useEffect(() => {
+    if (freelancer) {
+      loadValorFuncao(freelancer.funcao);
+    }
+  }, [freelancer?.funcao]);
 
   const loadFreelancer = async () => {
     try {
@@ -51,6 +57,22 @@ export default function EditarFreelancerPage() {
       router.push("/dashboard/freelancers");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadValorFuncao = async (funcao: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("valores_funcoes")
+        .select("valor")
+        .eq("funcao", funcao)
+        .single();
+
+      if (error) throw error;
+      setValorFuncao(data?.valor || 0);
+    } catch (error) {
+      console.error("Erro ao carregar valor da função:", error);
+      setValorFuncao(0);
     }
   };
 
@@ -102,19 +124,15 @@ export default function EditarFreelancerPage() {
     }
   };
 
-  // Atualizar valor padrão quando a função mudar
+  // Atualizar função
   const handleFuncaoChange = (novaFuncao: string) => {
     if (!freelancer) return;
     
-    const valorPadraoNovo = VALORES_PADRAO_POR_FUNCAO[novaFuncao as keyof typeof VALORES_PADRAO_POR_FUNCAO];
-    
-    // Atualizar função e valor padrão
+    // Apenas atualizar a função
     setFreelancer({ 
       ...freelancer, 
       funcao: novaFuncao as typeof freelancer.funcao,
-      valor_padrao: valorPadraoNovo
     });
-    setFuncaoAnterior(novaFuncao);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,7 +149,6 @@ export default function EditarFreelancerPage() {
           funcao: freelancer.funcao,
           whatsapp: freelancer.whatsapp,
           pix: freelancer.pix,
-          valor_padrao: freelancer.valor_padrao,
           foto_url: fotoUrl || null,
           ativo: freelancer.ativo,
           dias_semana_disponiveis: diasSemana,
@@ -248,11 +265,6 @@ export default function EditarFreelancerPage() {
                 <option value="recepcao">Recepção</option>
                 <option value="outros">Outros</option>
               </Select>
-              {funcaoAnterior !== freelancer.funcao && (
-                <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                  💡 Valor atualizado automaticamente para R$ {VALORES_PADRAO_POR_FUNCAO[freelancer.funcao].toFixed(2)}. Você pode editá-lo abaixo.
-                </p>
-              )}
             </div>
 
             {/* WhatsApp */}
@@ -281,30 +293,27 @@ export default function EditarFreelancerPage() {
               />
             </div>
 
-            {/* Valor Padrão */}
+            {/* Valor Padrão - Somente Leitura */}
             <div className="space-y-2">
-              <Label htmlFor="valor_padrao">Valor Padrão por Festa *</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
-                <Input
-                  id="valor_padrao"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={freelancer.valor_padrao}
-                  onChange={(e) =>
-                    setFreelancer({ ...freelancer, valor_padrao: parseFloat(e.target.value) || 0 })
-                  }
-                  placeholder="0,00"
-                  className="pl-10"
-                  required
-                />
+              <Label>Valor por Festa</Label>
+              <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Valor configurado para esta função:</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      R$ {valorFuncao.toFixed(2)}
+                    </p>
+                  </div>
+                  <Link href="/dashboard/configuracoes">
+                    <Button type="button" variant="outline" size="sm">
+                      Alterar Valores
+                    </Button>
+                  </Link>
+                </div>
               </div>
               <p className="text-xs text-gray-500">
-                {VALORES_PADRAO_POR_FUNCAO[freelancer.funcao] > 0 
-                  ? `Valor padrão para ${freelancer.funcao}: R$ ${VALORES_PADRAO_POR_FUNCAO[freelancer.funcao].toFixed(2)}. Você pode editar para dar bônus.`
-                  : "Defina o valor que este freelancer receberá por festa."
-                }
+                💡 O valor é definido pela função em <Link href="/dashboard/configuracoes" className="text-primary hover:underline">Configurações</Link>. 
+                Quando este freelancer for adicionado a uma festa, receberá automaticamente este valor.
               </p>
             </div>
 

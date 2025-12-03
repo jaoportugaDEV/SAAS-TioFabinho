@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
@@ -14,6 +15,7 @@ import {
   Calculator,
   CheckSquare,
   MessageSquare,
+  Settings,
   X,
 } from "lucide-react";
 
@@ -63,6 +65,11 @@ const menuItems = [
     href: "/dashboard/orcamentos",
     icon: Calculator,
   },
+  {
+    title: "Configurações",
+    href: "/dashboard/configuracoes",
+    icon: Settings,
+  },
 ];
 
 export function Sidebar({ open, onClose }: SidebarProps) {
@@ -88,8 +95,14 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-lg font-bold text-white">TF</span>
+            <div className="w-10 h-10 relative">
+              <Image
+                src="/LogoFabinho.png"
+                alt="Tio Fabinho Buffet"
+                width={40}
+                height={40}
+                className="object-contain"
+              />
             </div>
             <div>
               <h2 className="font-bold text-gray-900">Tio Fabinho</h2>

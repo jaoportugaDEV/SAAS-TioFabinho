@@ -126,12 +126,37 @@ export default function NovaFestaPage() {
 
       if (festaError) throw festaError;
 
-      // 2. Adicionar freelancers
+      // 2. Adicionar freelancers com valores
       if (formData.freelancers.length > 0) {
-        const freelancerInserts = formData.freelancers.map((freelancerId) => ({
+        // Buscar informações dos freelancers e valores das funções
+        const { data: freelancersData, error: freelancersError } = await supabase
+          .from("freelancers")
+          .select("id, funcao")
+          .in("id", formData.freelancers);
+
+        if (freelancersError) throw freelancersError;
+
+        // Buscar valores de todas as funções
+        const funcoes = [...new Set(freelancersData?.map((f) => f.funcao) || [])];
+        const { data: valoresFuncoes, error: valoresError } = await supabase
+          .from("valores_funcoes")
+          .select("funcao, valor")
+          .in("funcao", funcoes);
+
+        if (valoresError) throw valoresError;
+
+        // Criar mapa de valores por função
+        const valoresMap = new Map(
+          valoresFuncoes?.map((v) => [v.funcao, v.valor]) || []
+        );
+
+        // Criar inserts com valores
+        const freelancerInserts = freelancersData?.map((freelancer) => ({
           festa_id: festa.id,
-          freelancer_id: freelancerId,
-        }));
+          freelancer_id: freelancer.id,
+          valor_acordado: valoresMap.get(freelancer.funcao) || 0,
+          status_pagamento: 'pendente',
+        })) || [];
 
         const { error: freelancerError } = await supabase
           .from("festa_freelancers")

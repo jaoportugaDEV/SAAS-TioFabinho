@@ -60,13 +60,42 @@ export default function DashboardPage() {
         .select("*")
         .gte("data", now.toISOString().split("T")[0])
         .order("data")
-        .limit(5);
+        .limit(10); // Pegamos 10 para filtrar e garantir 5 válidas
+
+      // Filtrar festas que já passaram (considerando data e horário)
+      const proximasFesrasValidas = proximasFestas?.filter((festa) => {
+        const festaData = new Date(festa.data + "T00:00:00");
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        // Se a festa é de um dia futuro, incluir
+        if (festaData > hoje) {
+          return true;
+        }
+        
+        // Se a festa é hoje, verificar o horário
+        if (festaData.getTime() === hoje.getTime() && festa.horario) {
+          const [horas, minutos] = festa.horario.split(":");
+          const horaFesta = new Date();
+          horaFesta.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+          
+          // Incluir apenas se ainda não passou
+          return horaFesta > now;
+        }
+        
+        // Se é hoje mas não tem horário, incluir por segurança
+        if (festaData.getTime() === hoje.getTime() && !festa.horario) {
+          return true;
+        }
+        
+        return false;
+      }).slice(0, 5) || []; // Pegar apenas as 5 primeiras após filtrar
 
       setStats({
         festasDoMes: festas?.length || 0,
         freelancersAtivos: freelancers?.length || 0,
         faturamento,
-        proximasFestas: proximasFestas || [],
+        proximasFestas: proximasFesrasValidas,
       });
     } catch (error) {
       console.error("Erro ao carregar estatísticas:", error);
