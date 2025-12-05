@@ -136,6 +136,17 @@ CREATE TABLE IF NOT EXISTS despesas_festas (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- Tabela de Despesas Gerais (não vinculadas a festas específicas)
+CREATE TABLE IF NOT EXISTS despesas_gerais (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  descricao VARCHAR(255) NOT NULL,
+  valor DECIMAL(10,2) NOT NULL,
+  data DATE NOT NULL,
+  categoria VARCHAR(100),
+  observacoes TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
 -- Criar índices para melhor performance
 CREATE INDEX idx_freelancers_funcao ON freelancers(funcao);
 CREATE INDEX idx_freelancers_ativo ON freelancers(ativo);
@@ -147,6 +158,7 @@ CREATE INDEX idx_festa_fotos_festa ON festa_fotos(festa_id);
 CREATE INDEX idx_checklist_festa ON checklist(festa_id);
 CREATE INDEX idx_pagamentos_freelancers_festa ON pagamentos_freelancers(festa_id);
 CREATE INDEX idx_despesas_festas_festa ON despesas_festas(festa_id);
+CREATE INDEX idx_despesas_gerais_data ON despesas_gerais(data);
 CREATE INDEX idx_parcelas_orcamento ON parcelas_pagamento(orcamento_id);
 CREATE INDEX idx_parcelas_festa ON parcelas_pagamento(festa_id);
 CREATE INDEX idx_parcelas_vencimento ON parcelas_pagamento(data_vencimento);
@@ -164,6 +176,7 @@ ALTER TABLE checklist ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pagamentos_freelancers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mensagens_whatsapp ENABLE ROW LEVEL SECURITY;
 ALTER TABLE despesas_festas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE despesas_gerais ENABLE ROW LEVEL SECURITY;
 
 -- Políticas RLS: Permitir acesso completo apenas para usuários autenticados
 -- (A dona do sistema terá acesso total)
@@ -210,6 +223,10 @@ CREATE POLICY "Permitir acesso completo para usuários autenticados"
 
 CREATE POLICY "Permitir acesso completo para usuários autenticados"
   ON despesas_festas FOR ALL
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Permitir acesso completo para usuários autenticados"
+  ON despesas_gerais FOR ALL
   USING (auth.role() = 'authenticated');
 
 -- Storage Bucket para fotos (será criado manualmente no Supabase Dashboard)

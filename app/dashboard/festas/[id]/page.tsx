@@ -158,61 +158,63 @@ export default function DetalheFestaPage() {
   const statusInfo = statusLabels[festa.status] || statusLabels.planejamento;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-4 flex-1 min-w-0">
+      <div className="flex flex-col gap-3 sm:gap-4">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
           <Link href="/dashboard/festas">
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" className="flex-shrink-0">
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-3xl font-bold text-gray-900">{festa.titulo}</h1>
-              <Badge className={statusInfo.color}>{statusInfo.label}</Badge>
+            <div className="flex items-start gap-2 flex-wrap">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 break-words">{festa.titulo}</h1>
+              <Badge className={`${statusInfo.color} text-xs sm:text-sm flex-shrink-0`}>{statusInfo.label}</Badge>
             </div>
-            <p className="text-gray-500 mt-1">Detalhes completos da festa</p>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1">Detalhes completos da festa</p>
           </div>
         </div>
         
         {/* Ações */}
-        <div className="flex gap-3 items-end">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
           {/* Botão de Editar */}
-          <Link href={`/dashboard/festas/${festa.id}/editar`}>
-            <Button variant="outline" className="gap-2">
+          <Link href={`/dashboard/festas/${festa.id}/editar`} className="flex-1 sm:flex-none">
+            <Button variant="outline" className="gap-2 w-full sm:w-auto text-sm">
               <Pencil className="w-4 h-4" />
               Editar
             </Button>
           </Link>
           
           {/* Seletor de Status */}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1 flex-1 sm:flex-none">
             <label className="text-xs text-gray-500 font-medium">Alterar Status</label>
             <StatusSelector festaId={festa.id} currentStatus={festa.status} />
           </div>
           
           {/* Botão de Exclusão */}
-          <DeleteFestaDialog festaId={festa.id} festaTitulo={festa.titulo} />
+          <div className="flex items-end">
+            <DeleteFestaDialog festaId={festa.id} festaTitulo={festa.titulo} />
+          </div>
         </div>
       </div>
 
       {/* Informações Principais */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Informações da Festa e Convidados */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Detalhes da Festa</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl">Detalhes da Festa</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="space-y-2 p-4 sm:p-6 pt-0">
             {/* Seção: Informações Básicas */}
             <CollapsibleSection title="Informações Básicas" defaultOpen={true}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="flex items-start gap-3">
-                  <Calendar className="w-5 h-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Data e Horário</p>
-                    <p className="font-medium">
+              <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-gray-500">Data e Horário</p>
+                    <p className="text-sm sm:text-base font-medium break-words">
                       {formatDate(festa.data)}
                       {festa.horario && (
                         <span className="text-gray-600"> às {festa.horario}</span>
@@ -222,21 +224,21 @@ export default function DetalheFestaPage() {
                 </div>
 
                 {festa.tema && (
-                  <div className="flex items-start gap-3">
-                    <span className="text-xl mt-0.5">🎨</span>
-                    <div>
-                      <p className="text-sm text-gray-500">Tema</p>
-                      <p className="font-medium">{festa.tema}</p>
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <span className="text-lg sm:text-xl mt-0.5 flex-shrink-0">🎨</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-gray-500">Tema</p>
+                      <p className="text-sm sm:text-base font-medium break-words">{festa.tema}</p>
                     </div>
                   </div>
                 )}
 
                 {festa.local && (
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-sm text-gray-500">Local</p>
-                      <p className="font-medium">{festa.local}</p>
+                  <div className="flex items-start gap-2 sm:gap-3">
+                    <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs sm:text-sm text-gray-500">Local</p>
+                      <p className="text-sm sm:text-base font-medium break-words">{festa.local}</p>
                     </div>
                   </div>
                 )}
@@ -293,32 +295,32 @@ export default function DetalheFestaPage() {
 
         {/* Informações do Cliente */}
         <Card>
-          <CardHeader>
-            <CardTitle>Cliente</CardTitle>
+          <CardHeader className="p-4 sm:p-6">
+            <CardTitle className="text-lg sm:text-xl">Cliente</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6 pt-0">
             <CollapsibleSection title="Dados de Contato" defaultOpen={true}>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <User className="w-5 h-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Nome</p>
-                    <p className="font-medium">{festa.cliente_nome}</p>
+              <div className="space-y-3 sm:space-y-4">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-gray-500">Nome</p>
+                    <p className="text-sm sm:text-base font-medium break-words">{festa.cliente_nome}</p>
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <Phone className="w-5 h-5 text-primary mt-0.5" />
-                  <div>
-                    <p className="text-sm text-gray-500">Contato</p>
-                    <p className="font-medium">{festa.cliente_contato}</p>
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm text-gray-500">Contato</p>
+                    <p className="text-sm sm:text-base font-medium break-words">{festa.cliente_contato}</p>
                   </div>
                 </div>
 
                 {festa.cliente_observacoes && (
                   <div>
-                    <p className="text-sm text-gray-500 mb-1">Observações</p>
-                    <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-md">
+                    <p className="text-xs sm:text-sm text-gray-500 mb-1">Observações</p>
+                    <p className="text-xs sm:text-sm text-gray-700 bg-gray-50 p-2 sm:p-3 rounded-md break-words">
                       {festa.cliente_observacoes}
                     </p>
                   </div>

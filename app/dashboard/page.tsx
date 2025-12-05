@@ -120,72 +120,72 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 mt-1">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-500 mt-1">
           Bem-vinda ao sistema de gestão do Tio Fabinho Buffet
         </p>
       </div>
 
       {/* Cards de métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
               Festas este Mês
             </CardTitle>
-            <PartyPopper className="w-4 h-4 text-primary" />
+            <PartyPopper className="w-4 h-4 text-primary flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.festasDoMes}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.festasDoMes === 0 ? "Nenhuma festa cadastrada" : "festa(s) agendada(s)"}
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{stats.festasDoMes}</div>
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+              {stats.festasDoMes === 0 ? "Nenhuma festa" : "agendada(s)"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Freelancers Ativos
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Freelancers
             </CardTitle>
-            <Users className="w-4 h-4 text-primary" />
+            <Users className="w-4 h-4 text-primary flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.freelancersAtivos}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.freelancersAtivos === 0 ? "Cadastre sua equipe" : "na equipe"}
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{stats.freelancersAtivos}</div>
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+              {stats.freelancersAtivos === 0 ? "Cadastre" : "ativos"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Faturamento do Mês
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Faturamento
             </CardTitle>
-            <DollarSign className="w-4 h-4 text-primary" />
+            <DollarSign className="w-4 h-4 text-primary flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.faturamento)}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.faturamento === 0 ? "Aguardando festas" : "em orçamentos"}
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-base sm:text-xl md:text-2xl font-bold truncate">{formatCurrency(stats.faturamento)}</div>
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+              {stats.faturamento === 0 ? "Aguardando" : "orçamentos"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Próximas Festas
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Próximas
             </CardTitle>
-            <Calendar className="w-4 h-4 text-primary" />
+            <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.proximasFestas.length}</div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.proximasFestas.length === 0 ? "Nenhuma festa agendada" : "agendada(s)"}
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{stats.proximasFestas.length}</div>
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+              {stats.proximasFestas.length === 0 ? "Nenhuma" : "agendada(s)"}
             </p>
           </CardContent>
         </Card>
@@ -194,10 +194,10 @@ export default function DashboardPage() {
       {/* Próximas Festas */}
       {stats.proximasFestas.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Próximas Festas</CardTitle>
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <CardTitle className="text-lg sm:text-xl">Próximas Festas</CardTitle>
             <Link href="/dashboard/festas">
-              <Button variant="outline" size="sm" className="gap-2">
+              <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
                 Ver Todas
                 <ArrowRight className="w-4 h-4" />
               </Button>
@@ -209,21 +209,21 @@ export default function DashboardPage() {
                 <Link
                   key={festa.id}
                   href={`/dashboard/festas/${festa.id}`}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div>
-                    <p className="font-semibold">{festa.titulo}</p>
-                    <p className="text-sm text-gray-600">{festa.cliente_nome}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{festa.titulo}</p>
+                    <p className="text-sm text-gray-600 truncate">{festa.cliente_nome}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
+                  <div className="text-left sm:text-right flex-shrink-0">
+                    <p className="text-sm font-medium whitespace-nowrap">
                       {formatDate(festa.data)}
                       {festa.horario && (
                         <span className="text-primary ml-1">às {festa.horario}</span>
                       )}
                     </p>
                     {festa.tema && (
-                      <p className="text-xs text-gray-500">{festa.tema}</p>
+                      <p className="text-xs text-gray-500 truncate">{festa.tema}</p>
                     )}
                   </div>
                 </Link>

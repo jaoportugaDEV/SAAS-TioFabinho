@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 0.0.0.0",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -25,7 +25,8 @@
     "react-hook-form": "^7.54.0",
     "recharts": "^2.13.3",
     "tailwind-merge": "^2.5.5",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

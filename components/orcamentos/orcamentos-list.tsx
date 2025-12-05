@@ -41,9 +41,17 @@ interface OrcamentoComFesta {
 
 interface OrcamentosListProps {
   orcamentos: OrcamentoComFesta[];
+  showEncerradas: boolean;
+  onToggleEncerradas: (show: boolean) => void;
+  quantidadeEncerradas: number;
 }
 
-export function OrcamentosList({ orcamentos }: OrcamentosListProps) {
+export function OrcamentosList({ 
+  orcamentos, 
+  showEncerradas, 
+  onToggleEncerradas, 
+  quantidadeEncerradas 
+}: OrcamentosListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -87,26 +95,59 @@ export function OrcamentosList({ orcamentos }: OrcamentosListProps) {
           <CardTitle className="text-lg">Filtros</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar por festa ou cliente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
-              />
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Buscar por festa ou cliente..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="all">Todos os Status</option>
+                <option value="pendente">Pendente</option>
+                <option value="pago_parcial">Pago Parcial</option>
+                <option value="pago_total">Pago Total</option>
+              </select>
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="all">Todos os Status</option>
-              <option value="pendente">Pendente</option>
-              <option value="pago_parcial">Pago Parcial</option>
-              <option value="pago_total">Pago Total</option>
-            </select>
+            
+            {/* Toggle para mostrar festas encerradas */}
+            <div className="flex items-center justify-between pt-3 border-t border-gray-200">
+              <div className="flex items-center gap-3">
+                <label
+                  htmlFor="show-encerradas"
+                  className="text-sm font-medium text-gray-700 cursor-pointer"
+                >
+                  Exibir festas encerradas
+                </label>
+                {!showEncerradas && quantidadeEncerradas > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {quantidadeEncerradas} oculta{quantidadeEncerradas !== 1 ? "s" : ""}
+                  </Badge>
+                )}
+              </div>
+              <button
+                id="show-encerradas"
+                type="button"
+                onClick={() => onToggleEncerradas(!showEncerradas)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                  showEncerradas ? "bg-primary" : "bg-gray-200"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    showEncerradas ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>

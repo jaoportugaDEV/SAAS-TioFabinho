@@ -23,7 +23,7 @@ export default function DashboardLayout({
           userEmail={user?.email}
         />
         
-        <main className="p-4 lg:p-6">
+        <main className="p-3 sm:p-4 lg:p-6 max-w-full overflow-x-hidden">
           {children}
         </main>
       </div>

@@ -279,16 +279,24 @@ export default function NovaFestaPage() {
 
       {/* Progress Bar */}
       <Card>
-        <CardContent className="p-6">
-          <div className="flex justify-between mb-2">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex justify-between mb-2 gap-1">
             {steps.map((step) => (
-              <div key={step.id} className="flex-1 text-center">
+              <div key={step.id} className="flex-1 text-center min-w-0">
                 <div
-                  className={`text-sm font-medium ${
+                  className={`text-xs sm:text-sm font-medium truncate px-1 ${
                     currentStep >= step.id ? "text-primary" : "text-gray-400"
                   }`}
                 >
-                  {step.title}
+                  {/* Versão mobile: abreviações */}
+                  <span className="hidden sm:inline">{step.title}</span>
+                  <span className="sm:hidden">
+                    {step.id === 1 && "Info. Básicas"}
+                    {step.id === 2 && "Cliente"}
+                    {step.id === 3 && "Freelancers"}
+                    {step.id === 4 && "Orçam."}
+                    {step.id === 5 && "Checklist"}
+                  </span>
                 </div>
               </div>
             ))}

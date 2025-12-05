@@ -74,7 +74,7 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
 
     if (status === 'paga') {
       return (
-        <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+        <Badge className="bg-green-100 text-green-800 flex items-center gap-1 text-xs flex-shrink-0">
           <CheckCircle className="w-3 h-3" />
           Paga
         </Badge>
@@ -83,7 +83,7 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
 
     if (isAtrasada || status === 'atrasada') {
       return (
-        <Badge className="bg-red-100 text-red-800 flex items-center gap-1">
+        <Badge className="bg-red-100 text-red-800 flex items-center gap-1 text-xs flex-shrink-0">
           <AlertTriangle className="w-3 h-3" />
           Atrasada
         </Badge>
@@ -91,7 +91,7 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
     }
 
     return (
-      <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1">
+      <Badge className="bg-yellow-100 text-yellow-800 flex items-center gap-1 text-xs flex-shrink-0">
         <Clock className="w-3 h-3" />
         Pendente
       </Badge>
@@ -164,30 +164,30 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
   return (
     <>
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
             Pagamentos
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
           {/* Resumo Financeiro */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-600 font-medium mb-1">Total do Orçamento</p>
-              <p className="text-2xl font-bold text-blue-900">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-blue-600 font-medium mb-1">Total do Orçamento</p>
+              <p className="text-lg sm:text-2xl font-bold text-blue-900 truncate">
                 R$ {Number(orcamento.total).toFixed(2)}
               </p>
             </div>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-600 font-medium mb-1">Total Pago</p>
-              <p className="text-2xl font-bold text-green-900">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-green-600 font-medium mb-1">Total Pago</p>
+              <p className="text-lg sm:text-2xl font-bold text-green-900 truncate">
                 R$ {totalPago.toFixed(2)}
               </p>
             </div>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <p className="text-sm text-orange-600 font-medium mb-1">Total Pendente</p>
-              <p className="text-2xl font-bold text-orange-900">
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 sm:p-4">
+              <p className="text-xs sm:text-sm text-orange-600 font-medium mb-1">Total Pendente</p>
+              <p className="text-lg sm:text-2xl font-bold text-orange-900 truncate">
                 R$ {totalPendente.toFixed(2)}
               </p>
             </div>
@@ -196,17 +196,17 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
           {/* Barra de Progresso */}
           {parcelas.length > 0 && (
             <div>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-700">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2 mb-2">
+                <span className="text-xs sm:text-sm font-medium text-gray-700">
                   Progresso do Pagamento
                 </span>
-                <span className="text-sm text-gray-600">
-                  {parcelas.filter((p) => p.status === 'paga').length} de {parcelas.length} parcelas pagas
+                <span className="text-xs sm:text-sm text-gray-600">
+                  {parcelas.filter((p) => p.status === 'paga').length} de {parcelas.length} pagas
                 </span>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+              <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
                 <div
-                  className="bg-green-500 h-3 rounded-full transition-all duration-300"
+                  className="bg-green-500 h-2 sm:h-3 rounded-full transition-all duration-300"
                   style={{ width: `${progresso}%` }}
                 />
               </div>
@@ -215,10 +215,10 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
 
           {/* Informações de Parcelamento */}
           {orcamento.forma_pagamento === 'parcelado' && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-              <h4 className="font-semibold text-yellow-900 mb-2">Pagamento Parcelado</h4>
-              <div className="grid grid-cols-2 gap-2 text-sm text-yellow-800">
-                <p>• Quantidade de parcelas: {orcamento.quantidade_parcelas}x</p>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 sm:p-4">
+              <h4 className="text-sm sm:text-base font-semibold text-yellow-900 mb-2">Pagamento Parcelado</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm text-yellow-800">
+                <p>• Parcelas: {orcamento.quantidade_parcelas}x</p>
                 <p>• Entrada: R$ {Number(orcamento.entrada).toFixed(2)}</p>
               </div>
             </div>
@@ -227,31 +227,31 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
           {/* Lista de Parcelas */}
           {parcelas.length > 0 ? (
             <div className="space-y-3">
-              <h4 className="font-semibold text-gray-900">Parcelas</h4>
-              <div className="space-y-2">
+              <h4 className="text-sm sm:text-base font-semibold text-gray-900">Parcelas</h4>
+              <div className="space-y-2 sm:space-y-3">
                 {parcelas.map((parcela) => (
                   <div
                     key={parcela.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex flex-col gap-3 p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <span className="font-semibold text-gray-900">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <span className="text-sm sm:text-base font-semibold text-gray-900">
                           Parcela {parcela.numero_parcela}
                         </span>
                         {getStatusBadge(parcela.status, parcela.data_vencimento)}
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <p>Valor: R$ {Number(parcela.valor).toFixed(2)}</p>
-                        <p>Vencimento: {formatDate(parcela.data_vencimento)}</p>
+                      <div className="text-xs sm:text-sm text-gray-600 space-y-1">
+                        <p className="break-words">Valor: R$ {Number(parcela.valor).toFixed(2)}</p>
+                        <p className="break-words">Vencimento: {formatDate(parcela.data_vencimento)}</p>
                         {parcela.data_pagamento && (
-                          <p className="text-green-600">
+                          <p className="text-green-600 break-words">
                             Pago em: {formatDate(parcela.data_pagamento)}
                             {parcela.metodo_pagamento && ` - ${parcela.metodo_pagamento}`}
                           </p>
                         )}
                         {parcela.observacoes && (
-                          <p className="text-gray-500 italic">Obs: {parcela.observacoes}</p>
+                          <p className="text-gray-500 italic break-words text-xs">Obs: {parcela.observacoes}</p>
                         )}
                       </div>
                     </div>
@@ -259,7 +259,7 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
                       <Button
                         size="sm"
                         onClick={() => handleMarcarPaga(parcela)}
-                        className="ml-4"
+                        className="w-full sm:w-auto text-xs sm:text-sm"
                       >
                         <CheckCircle className="w-4 h-4 mr-2" />
                         Marcar como Paga

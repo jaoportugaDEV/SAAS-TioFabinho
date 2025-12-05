@@ -92,29 +92,30 @@ export function MarcarPagoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Marcar Parcela como Paga</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-base sm:text-lg">Marcar Parcela como Paga</DialogTitle>
+            <DialogDescription className="text-sm">
               Parcela {parcela.numero_parcela} - R$ {Number(parcela.valor).toFixed(2)}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
             <div className="space-y-2">
-              <Label htmlFor="data_pagamento">Data do Pagamento *</Label>
+              <Label htmlFor="data_pagamento" className="text-sm">Data do Pagamento *</Label>
               <Input
                 id="data_pagamento"
                 type="date"
                 value={dataPagamento}
                 onChange={(e) => setDataPagamento(e.target.value)}
                 required
+                className="text-sm"
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="metodo_pagamento">Método de Pagamento *</Label>
+              <Label htmlFor="metodo_pagamento" className="text-sm">Método de Pagamento *</Label>
               <select
                 id="metodo_pagamento"
                 value={metodoPagamento}
@@ -132,33 +133,35 @@ export function MarcarPagoDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações (Opcional)</Label>
+              <Label htmlFor="observacoes" className="text-sm">Observações (Opcional)</Label>
               <Textarea
                 id="observacoes"
                 value={observacoes}
                 onChange={(e) => setObservacoes(e.target.value)}
                 placeholder="Ex: Pagamento recebido via PIX às 14h30"
                 rows={3}
+                className="text-sm resize-none"
               />
             </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-sm text-blue-900">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 sm:p-3">
+              <p className="text-xs sm:text-sm text-blue-900">
                 ✓ O status do orçamento será atualizado automaticamente
               </p>
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="w-full sm:w-auto text-sm"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="w-full sm:w-auto text-sm">
               {loading ? "Salvando..." : "Confirmar Pagamento"}
             </Button>
           </DialogFooter>

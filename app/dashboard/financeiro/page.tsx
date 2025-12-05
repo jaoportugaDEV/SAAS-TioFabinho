@@ -271,15 +271,15 @@ export default function FinanceiroPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <DollarSign className="w-8 h-8 text-primary" />
-            Financeiro
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2 sm:gap-3">
+            <DollarSign className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
+            <span>Financeiro</span>
           </h1>
-          <p className="text-gray-500 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">
             Acompanhe receitas, despesas e lucros
           </p>
         </div>
@@ -289,7 +289,7 @@ export default function FinanceiroPage() {
           <select
             value={mesAtual}
             onChange={(e) => setMesAtual(Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 text-xs sm:text-sm px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {meses.map((mes, index) => (
               <option key={index} value={index + 1}>
@@ -300,7 +300,7 @@ export default function FinanceiroPage() {
           <select
             value={anoAtual}
             onChange={(e) => setAnoAtual(Number(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            className="w-20 sm:w-24 text-xs sm:text-sm px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {[2024, 2025, 2026, 2027].map((ano) => (
               <option key={ano} value={ano}>
@@ -312,70 +312,70 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Cards de Métricas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Receitas do Mês
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Receitas
             </CardTitle>
-            <TrendingUp className="w-4 h-4 text-green-600" />
+            <TrendingUp className="w-4 h-4 text-green-600 flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-base sm:text-xl md:text-2xl font-bold text-green-600 truncate">
               {formatCurrency(stats.totalReceitas)}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              {stats.festasDoMes} festa(s) este mês
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+              {stats.festasDoMes} festa(s)
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Despesas Freelancers
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Desp. Freel.
             </CardTitle>
-            <TrendingDown className="w-4 h-4 text-orange-600" />
+            <TrendingDown className="w-4 h-4 text-orange-600 flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-base sm:text-xl md:text-2xl font-bold text-orange-600 truncate">
               {formatCurrency(stats.totalDespesasFreelancers)}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
-              Pagamentos de freelancers
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+              Freelancers
             </p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Despesas Gerais
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Desp. Gerais
             </CardTitle>
-            <TrendingDown className="w-4 h-4 text-red-600" />
+            <TrendingDown className="w-4 h-4 text-red-600 flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-base sm:text-xl md:text-2xl font-bold text-red-600 truncate">
               {formatCurrency(stats.totalDespesasGerais)}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
               {despesasGerais.length} despesa(s)
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Lucro do Mês
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Lucro
             </CardTitle>
-            <DollarSign className="w-4 h-4 text-primary" />
+            <DollarSign className="w-4 h-4 text-primary flex-shrink-0" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-primary">
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-base sm:text-xl md:text-2xl font-bold text-primary truncate">
               {formatCurrency(stats.lucro)}
             </div>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
               {stats.lucro >= 0 ? "Positivo" : "Negativo"}
             </p>
           </CardContent>
@@ -384,45 +384,45 @@ export default function FinanceiroPage() {
 
       {/* Botões de Download de PDFs */}
       <Card className="bg-gradient-to-br from-red-50 to-white border-red-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-primary">
-            <FileText className="w-5 h-5" />
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-primary text-base sm:text-lg">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
             Relatórios Mensais em PDF
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             <Button
               onClick={handleGerarPDFDespesas}
               disabled={gerandoPDF}
-              className="h-24 flex flex-col items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white"
+              className="h-20 sm:h-24 flex flex-col items-center justify-center gap-1.5 sm:gap-2 bg-red-600 hover:bg-red-700 text-white"
             >
-              <Download className="w-6 h-6" />
-              <span className="font-semibold">Relatório de Despesas</span>
-              <span className="text-xs opacity-90">Freelancers + Gerais</span>
+              <Download className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span className="text-xs sm:text-sm font-semibold text-center">Relatório de Despesas</span>
+              <span className="text-xs opacity-90 hidden sm:inline">Freelancers + Gerais</span>
             </Button>
 
             <Button
               onClick={handleGerarPDFFestas}
               disabled={gerandoPDF}
-              className="h-24 flex flex-col items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+              className="h-20 sm:h-24 flex flex-col items-center justify-center gap-1.5 sm:gap-2 bg-green-600 hover:bg-green-700 text-white"
             >
-              <Download className="w-6 h-6" />
-              <span className="font-semibold">Relatório de Festas</span>
-              <span className="text-xs opacity-90">Eventos realizados</span>
+              <Download className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span className="text-xs sm:text-sm font-semibold text-center">Relatório de Festas</span>
+              <span className="text-xs opacity-90 hidden sm:inline">Eventos realizados</span>
             </Button>
 
             <Button
               onClick={handleGerarPDFFreelancers}
               disabled={gerandoPDF}
-              className="h-24 flex flex-col items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+              className="h-20 sm:h-24 flex flex-col items-center justify-center gap-1.5 sm:gap-2 bg-blue-600 hover:bg-blue-700 text-white"
             >
-              <Download className="w-6 h-6" />
-              <span className="font-semibold">Relatório de Freelancers</span>
-              <span className="text-xs opacity-90">Pagamentos realizados</span>
+              <Download className="w-5 h-5 sm:w-6 sm:h-6" />
+              <span className="text-xs sm:text-sm font-semibold text-center">Relatório de Freelancers</span>
+              <span className="text-xs opacity-90 hidden sm:inline">Pagamentos realizados</span>
             </Button>
           </div>
-          <p className="text-xs text-gray-500 mt-4 text-center">
+          <p className="text-xs text-gray-500 mt-3 sm:mt-4 text-center">
             Os relatórios contêm apenas informações do mês selecionado
           </p>
         </CardContent>
@@ -430,14 +430,14 @@ export default function FinanceiroPage() {
 
       {/* Despesas Gerais */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Despesas Gerais do Mês</CardTitle>
-          <Button onClick={() => setDialogOpen(true)} className="gap-2">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-4 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Despesas Gerais do Mês</CardTitle>
+          <Button onClick={() => setDialogOpen(true)} className="gap-2 w-full sm:w-auto text-sm">
             <Plus className="w-4 h-4" />
             Nova Despesa
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           {despesasGerais.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>Nenhuma despesa geral cadastrada neste mês</p>
@@ -448,23 +448,23 @@ export default function FinanceiroPage() {
               {despesasGerais.map((despesa) => (
                 <div
                   key={despesa.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <div className="flex-1">
-                    <p className="font-medium text-gray-900">{despesa.descricao}</p>
-                    <p className="text-sm text-gray-500">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm sm:text-base text-gray-900 break-words">{despesa.descricao}</p>
+                    <p className="text-xs sm:text-sm text-gray-500">
                       {new Date(despesa.data + "T00:00:00").toLocaleDateString("pt-BR")}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold text-lg text-red-600">
+                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                    <span className="font-bold text-base sm:text-lg text-red-600 whitespace-nowrap">
                       {formatCurrency(despesa.valor)}
                     </span>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleExcluirDespesa(despesa.id)}
-                      className="text-red-600 hover:bg-red-50"
+                      className="text-red-600 hover:bg-red-50 flex-shrink-0"
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>

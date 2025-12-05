@@ -48,7 +48,9 @@ export function StepInfoBasica({ formData, setFormData, errors = {} }: StepInfoB
               onChange={(e) => setFormData({ ...formData, data: e.target.value })}
               required
               className={errors.data ? "border-red-500 focus-visible:ring-red-500" : ""}
+              min={new Date().toISOString().split('T')[0]}
             />
+            <p className="text-xs text-gray-500">Selecione a data do evento</p>
             {errors.data && (
               <p className="text-sm text-red-600 mt-1">{errors.data}</p>
             )}
@@ -56,14 +58,46 @@ export function StepInfoBasica({ formData, setFormData, errors = {} }: StepInfoB
 
           <div className="space-y-2">
             <Label htmlFor="horario">Horário</Label>
-            <Input
-              type="time"
+            <Select
               id="horario"
               value={formData.horario || ""}
               onChange={(e) => setFormData({ ...formData, horario: e.target.value })}
-              placeholder="--:--"
-            />
-            <p className="text-xs text-gray-500">Horário de início</p>
+            >
+              <option value="">Selecione o horário</option>
+              <option value="08:00">08:00</option>
+              <option value="08:30">08:30</option>
+              <option value="09:00">09:00</option>
+              <option value="09:30">09:30</option>
+              <option value="10:00">10:00</option>
+              <option value="10:30">10:30</option>
+              <option value="11:00">11:00</option>
+              <option value="11:30">11:30</option>
+              <option value="12:00">12:00</option>
+              <option value="12:30">12:30</option>
+              <option value="13:00">13:00</option>
+              <option value="13:30">13:30</option>
+              <option value="14:00">14:00</option>
+              <option value="14:30">14:30</option>
+              <option value="15:00">15:00</option>
+              <option value="15:30">15:30</option>
+              <option value="16:00">16:00</option>
+              <option value="16:30">16:30</option>
+              <option value="17:00">17:00</option>
+              <option value="17:30">17:30</option>
+              <option value="18:00">18:00</option>
+              <option value="18:30">18:30</option>
+              <option value="19:00">19:00</option>
+              <option value="19:30">19:30</option>
+              <option value="20:00">20:00</option>
+              <option value="20:30">20:30</option>
+              <option value="21:00">21:00</option>
+              <option value="21:30">21:30</option>
+              <option value="22:00">22:00</option>
+              <option value="22:30">22:30</option>
+              <option value="23:00">23:00</option>
+              <option value="23:30">23:30</option>
+            </Select>
+            <p className="text-xs text-gray-500">Horário de início da festa</p>
           </div>
 
           <div className="space-y-2">
@@ -77,8 +111,8 @@ export function StepInfoBasica({ formData, setFormData, errors = {} }: StepInfoB
             >
               <option value="planejamento">Planejamento</option>
               <option value="confirmada">Confirmada</option>
-              <option value="concluida">Concluída</option>
             </Select>
+            <p className="text-xs text-gray-500">Status inicial da festa</p>
           </div>
         </div>
 
@@ -94,12 +128,15 @@ export function StepInfoBasica({ formData, setFormData, errors = {} }: StepInfoB
 
         <div className="space-y-2">
           <Label htmlFor="local">Local</Label>
-          <Input
+          <Select
             id="local"
             value={formData.local}
             onChange={(e) => setFormData({ ...formData, local: e.target.value })}
-            placeholder="Ex: Salão de Festas, Chácara, etc."
-          />
+          >
+            <option value="">Selecione o local</option>
+            <option value="TioFabinho Buffet un.1">TioFabinho Buffet un.1</option>
+            <option value="TioFabinho Buffet un.2">TioFabinho Buffet un.2</option>
+          </Select>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 export type FuncaoFreelancer = 'monitor' | 'cozinheira' | 'fotografo' | 'garcom' | 'recepcao' | 'outros';
 
-export type StatusFesta = 'planejamento' | 'confirmada' | 'encerrada_pendente' | 'encerrada';
+export type StatusFesta = 'planejamento' | 'confirmada' | 'encerrada_pendente' | 'encerrada' | 'cancelada';
 
 export type StatusPagamento = 'pendente' | 'pago_parcial' | 'pago_total';
 

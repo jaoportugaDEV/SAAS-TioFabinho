@@ -66,7 +66,10 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
 
       {/* Adicionar Item */}
       <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg space-y-4">
-        <h3 className="font-semibold text-gray-900">Adicionar Item</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-semibold text-gray-900">Adicionar Item</h3>
+          <p className="text-xs text-gray-500 italic">💡 Use ponto para centavos (ex: 150.50)</p>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-4">
           <div className="sm:col-span-6">
             <Label htmlFor="descricao">Descrição</Label>
@@ -101,13 +104,18 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
               id="valor_unitario"
               min="0"
               step="0.01"
-              value={novoItem.valor_unitario}
+              value={novoItem.valor_unitario || ""}
               onChange={(e) =>
                 setNovoItem({
                   ...novoItem,
-                  valor_unitario: Number(e.target.value),
+                  valor_unitario: e.target.value === "" ? 0 : Number(e.target.value),
                 })
               }
+              onFocus={(e) => {
+                if (novoItem.valor_unitario === 0) {
+                  e.target.select();
+                }
+              }}
               placeholder="0.00"
             />
           </div>
@@ -123,7 +131,9 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
       {formData.orcamento.itens.length > 0 && (
         <div className="space-y-2">
           <h3 className="font-semibold text-gray-900">Itens do Orçamento</h3>
-          <div className="border rounded-lg overflow-hidden">
+          
+          {/* Desktop: Tabela */}
+          <div className="hidden md:block border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -160,6 +170,42 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile: Cards */}
+          <div className="md:hidden space-y-3">
+            {formData.orcamento.itens.map((item: any, index: number) => (
+              <div key={index} className="border rounded-lg p-3 bg-white space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <h4 className="font-semibold text-gray-900 flex-1">{item.descricao}</h4>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removerItem(index)}
+                    className="h-8 w-8 p-0 flex-shrink-0"
+                  >
+                    <Trash2 className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-sm">
+                  <div>
+                    <p className="text-gray-500 text-xs">Quantidade</p>
+                    <p className="font-medium">{item.quantidade}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs">Valor Unit.</p>
+                    <p className="font-medium">{formatCurrency(item.valor_unitario)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs">Subtotal</p>
+                    <p className="font-bold text-primary">
+                      {formatCurrency(item.quantidade * item.valor_unitario)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -172,16 +218,21 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
             id="desconto"
             min="0"
             step="0.01"
-            value={formData.orcamento.desconto}
+            value={formData.orcamento.desconto || ""}
             onChange={(e) =>
               setFormData({
                 ...formData,
                 orcamento: {
                   ...formData.orcamento,
-                  desconto: Number(e.target.value),
+                  desconto: e.target.value === "" ? 0 : Number(e.target.value),
                 },
               })
             }
+            onFocus={(e) => {
+              if (formData.orcamento.desconto === 0 || !formData.orcamento.desconto) {
+                e.target.select();
+              }
+            }}
             placeholder="0.00"
           />
         </div>
@@ -192,16 +243,21 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
             id="acrescimo"
             min="0"
             step="0.01"
-            value={formData.orcamento.acrescimo}
+            value={formData.orcamento.acrescimo || ""}
             onChange={(e) =>
               setFormData({
                 ...formData,
                 orcamento: {
                   ...formData.orcamento,
-                  acrescimo: Number(e.target.value),
+                  acrescimo: e.target.value === "" ? 0 : Number(e.target.value),
                 },
               })
             }
+            onFocus={(e) => {
+              if (formData.orcamento.acrescimo === 0 || !formData.orcamento.acrescimo) {
+                e.target.select();
+              }
+            }}
             placeholder="0.00"
           />
         </div>
@@ -237,11 +293,8 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
             <div className="space-y-2">
               <Label htmlFor="quantidade_parcelas">Quantidade de Parcelas</Label>
-              <Input
-                type="number"
+              <select
                 id="quantidade_parcelas"
-                min="2"
-                max="12"
                 value={formData.orcamento.quantidade_parcelas || 2}
                 onChange={(e) =>
                   setFormData({
@@ -252,7 +305,14 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
                     },
                   })
                 }
-              />
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {Array.from({ length: 11 }, (_, i) => i + 2).map((num) => (
+                  <option key={num} value={num}>
+                    {num}x
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="entrada">Entrada (R$) - Opcional</Label>
@@ -261,16 +321,21 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
                 id="entrada"
                 min="0"
                 step="0.01"
-                value={formData.orcamento.entrada || 0}
+                value={formData.orcamento.entrada || ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
                     orcamento: {
                       ...formData.orcamento,
-                      entrada: Number(e.target.value),
+                      entrada: e.target.value === "" ? 0 : Number(e.target.value),
                     },
                   })
                 }
+                onFocus={(e) => {
+                  if (formData.orcamento.entrada === 0 || !formData.orcamento.entrada) {
+                    e.target.select();
+                  }
+                }}
                 placeholder="0.00"
               />
             </div>

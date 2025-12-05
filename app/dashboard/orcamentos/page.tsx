@@ -38,6 +38,7 @@ interface OrcamentoComFesta {
 export default function OrcamentosPage() {
   const [orcamentos, setOrcamentos] = useState<OrcamentoComFesta[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEncerradas, setShowEncerradas] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -89,6 +90,13 @@ export default function OrcamentosPage() {
         };
       });
 
+      // Ordenar por data da festa (mais próximas primeiro)
+      orcamentosCompletos.sort((a, b) => {
+        if (!a.festa.data) return 1;
+        if (!b.festa.data) return -1;
+        return new Date(a.festa.data).getTime() - new Date(b.festa.data).getTime();
+      });
+
       setOrcamentos(orcamentosCompletos);
     } catch (error) {
       console.error("Erro ao carregar orçamentos:", error);
@@ -97,8 +105,20 @@ export default function OrcamentosPage() {
     }
   };
 
-  // Calcular estatísticas
-  const stats = orcamentos.reduce(
+  // Filtrar orçamentos baseado no estado showEncerradas
+  const orcamentosFiltrados = showEncerradas
+    ? orcamentos
+    : orcamentos.filter(
+        (o) => o.festa.status !== "encerrada" && o.festa.status !== "encerrada_pendente"
+      );
+
+  // Contar quantas festas encerradas existem
+  const quantidadeEncerradas = orcamentos.filter(
+    (o) => o.festa.status === "encerrada" || o.festa.status === "encerrada_pendente"
+  ).length;
+
+  // Calcular estatísticas apenas com festas ativas
+  const stats = orcamentosFiltrados.reduce(
     (acc, orcamento) => {
       const total = Number(orcamento.total);
       acc.totalGeral += total;
@@ -153,11 +173,16 @@ export default function OrcamentosPage() {
         totalPago={stats.totalPago}
         totalPendente={stats.totalPendente}
         totalParcial={stats.totalParcial}
-        quantidadeTotal={orcamentos.length}
+        quantidadeTotal={orcamentosFiltrados.length}
       />
 
       {/* Lista de Orçamentos */}
-      <OrcamentosList orcamentos={orcamentos} />
+      <OrcamentosList 
+        orcamentos={orcamentosFiltrados}
+        showEncerradas={showEncerradas}
+        onToggleEncerradas={setShowEncerradas}
+        quantidadeEncerradas={quantidadeEncerradas}
+      />
     </div>
   );
 }

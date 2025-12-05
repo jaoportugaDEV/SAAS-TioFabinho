@@ -327,10 +327,24 @@ export default function CalendarioPage() {
             <div className="space-y-2">
               {[...festas]
                 .sort((a, b) => {
-                  // Ordenar por data e horário (mais próximas primeiro)
-                  const dateA = new Date(a.data + (a.horario ? `T${a.horario}` : 'T00:00:00')).getTime();
-                  const dateB = new Date(b.data + (b.horario ? `T${b.horario}` : 'T00:00:00')).getTime();
-                  return dateA - dateB;
+                  const agora = new Date();
+                  const dateA = new Date(a.data + (a.horario ? `T${a.horario}` : 'T23:59:59'));
+                  const dateB = new Date(b.data + (b.horario ? `T${b.horario}` : 'T23:59:59'));
+                  
+                  const aPassada = dateA < agora;
+                  const bPassada = dateB < agora;
+                  
+                  // Se A ainda não passou e B já passou, A vem primeiro
+                  if (!aPassada && bPassada) return -1;
+                  if (aPassada && !bPassada) return 1;
+                  
+                  // Se ambas ainda não passaram: mais próximas primeiro (ordem crescente)
+                  if (!aPassada && !bPassada) {
+                    return dateA.getTime() - dateB.getTime();
+                  }
+                  
+                  // Se ambas já passaram: mais recentes primeiro (ordem decrescente)
+                  return dateB.getTime() - dateA.getTime();
                 })
                 .map((festa) => {
                   const dataFesta = new Date(festa.data + (festa.horario ? `T${festa.horario}` : 'T23:59:59'));

@@ -25,6 +25,7 @@ const funcaoLabels: Record<string, string> = {
 export function StepFreelancers({ formData, setFormData }: StepFreelancersProps) {
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filtroFuncao, setFiltroFuncao] = useState<string>("todos");
   const supabase = createClient();
 
   useEffect(() => {
@@ -85,6 +86,11 @@ export function StepFreelancers({ formData, setFormData }: StepFreelancersProps)
     return <div className="text-center py-8 text-gray-600">Carregando freelancers...</div>;
   }
 
+  // Filtrar freelancers pela função selecionada
+  const freelancersFiltrados = filtroFuncao === "todos" 
+    ? freelancers 
+    : freelancers.filter(f => f.funcao === filtroFuncao);
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,16 +100,40 @@ export function StepFreelancers({ formData, setFormData }: StepFreelancersProps)
           {formData.data && " (mostrando disponibilidade para a data selecionada)"}
         </p>
       </div>
+
+      {/* Filtro por Função */}
+      <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg">
+        <Label htmlFor="filtro-funcao" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+          Filtrar por função:
+        </Label>
+        <select
+          id="filtro-funcao"
+          value={filtroFuncao}
+          onChange={(e) => setFiltroFuncao(e.target.value)}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          <option value="todos">Todos</option>
+          <option value="monitor">Monitor</option>
+          <option value="cozinheira">Cozinheira</option>
+          <option value="fotografo">Fotógrafo</option>
+          <option value="garcom">Garçom</option>
+          <option value="recepcao">Recepção</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
       
-      {freelancers.length === 0 ? (
+      {freelancersFiltrados.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <p className="text-gray-600">
-            Nenhum freelancer cadastrado ainda.
+            {filtroFuncao === "todos" 
+              ? "Nenhum freelancer cadastrado ainda."
+              : `Nenhum freelancer encontrado com a função "${funcaoLabels[filtroFuncao]}".`
+            }
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {freelancers.map((freelancer) => {
+          {freelancersFiltrados.map((freelancer) => {
             const selected = isSelected(freelancer.id);
             const available = isAvailable(freelancer);
 
