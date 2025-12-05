@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { DollarSign, Copy, CheckCircle, Clock, Calendar } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { getFestasPagamentosPendentes, marcarPagamentoComoRealizado } from "@/app/actions/pagamentos";
+import { checkAndUpdatePagamentosCompletos } from "@/app/actions/auto-update-status";
 
 interface FreelancerPagamento {
   id: string;
@@ -44,16 +46,48 @@ const funcaoLabels: Record<string, string> = {
 };
 
 export default function PagamentosPage() {
+  const searchParams = useSearchParams();
   const [festas, setFestas] = useState<FestaPagamento[]>([]);
   const [loading, setLoading] = useState(true);
   const [processando, setProcessando] = useState<string | null>(null);
+  const [highlightFestaId, setHighlightFestaId] = useState<string | null>(null);
+  const festaRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
 
   useEffect(() => {
     loadFestas();
   }, []);
 
+  // Detectar festa destacada e fazer scroll + animação
+  useEffect(() => {
+    const festaId = searchParams.get('festa');
+    if (festaId && !loading && festas.length > 0) {
+      // Aguardar renderização
+      setTimeout(() => {
+        const festaRef = festaRefs.current[festaId];
+        if (festaRef) {
+          // Scroll suave até a festa
+          festaRef.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+          
+          // Ativar animação de destaque
+          setHighlightFestaId(festaId);
+          
+          // Remover animação após 4 segundos
+          setTimeout(() => {
+            setHighlightFestaId(null);
+          }, 4000);
+        }
+      }, 500);
+    }
+  }, [searchParams, loading, festas]);
+
   const loadFestas = async () => {
     setLoading(true);
+    // Verificar e atualizar status de festas com pagamentos completos
+    await checkAndUpdatePagamentosCompletos();
+    // Carregar festas pendentes
     const result = await getFestasPagamentosPendentes();
     if (result.success) {
       setFestas(result.data as FestaPagamento[]);
@@ -136,10 +170,15 @@ export default function PagamentosPage() {
             return (
               <Card
                 key={festa.id}
-                className={`${
+                ref={(el) => (festaRefs.current[festa.id] = el)}
+                className={`transition-all duration-500 ${
                   todosPagos
                     ? "border-green-300 bg-green-50/50"
                     : "border-yellow-300 bg-yellow-50/50"
+                } ${
+                  highlightFestaId === festa.id
+                    ? "ring-4 ring-red-500 ring-opacity-50 shadow-2xl shadow-red-500/50 scale-[1.02]"
+                    : ""
                 }`}
               >
                 <CardHeader>

@@ -3,7 +3,7 @@
 
 -- Criar tipos ENUM
 CREATE TYPE funcao_freelancer AS ENUM ('monitor', 'cozinheira', 'fotografo', 'garcom', 'recepcao', 'outros');
-CREATE TYPE status_festa AS ENUM ('planejamento', 'confirmada', 'em_andamento', 'concluida', 'cancelada');
+CREATE TYPE status_festa AS ENUM ('planejamento', 'confirmada', 'encerrada_pendente', 'encerrada', 'cancelada');
 CREATE TYPE status_pagamento AS ENUM ('pendente', 'pago_parcial', 'pago_total');
 CREATE TYPE status_parcela AS ENUM ('pendente', 'paga', 'atrasada');
 CREATE TYPE categoria_despesa AS ENUM ('freelancer', 'material', 'aluguel', 'outros');
@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS festas (
   cliente_contato VARCHAR(50) NOT NULL,
   cliente_observacoes TEXT,
   status status_festa DEFAULT 'planejamento',
+  status_pagamento_cliente status_pagamento DEFAULT 'pendente',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

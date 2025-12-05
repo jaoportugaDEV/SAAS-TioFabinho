@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState, useRef } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Festa, ChecklistItem, Freelancer, FestaFreelancer, Orcamento } from "@/types";
@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Calendar, MapPin, User, Phone } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { StatusSelector } from "@/components/festas/status-selector";
+import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
 import { ChecklistManager } from "@/components/festas/checklist-manager";
 import { FreelancerManager } from "@/components/festas/freelancer-manager";
 import { GaleriaFotos } from "@/components/festas/galeria-fotos";
@@ -24,23 +25,53 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 const statusLabels: Record<string, { label: string; color: string }> = {
   planejamento: { label: "Planejamento", color: "bg-blue-100 text-blue-800" },
   confirmada: { label: "Confirmada", color: "bg-green-100 text-green-800" },
-  concluida: { label: "Concluída", color: "bg-gray-100 text-gray-800" },
+  encerrada_pendente: { label: "Encerrada - Pag. Pendente", color: "bg-orange-100 text-orange-800" },
+  encerrada: { label: "Encerrada", color: "bg-gray-100 text-gray-800" },
 };
 
 export default function DetalheFestaPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
+  const pagamentoRef = useRef<HTMLDivElement>(null);
   const [festa, setFesta] = useState<Festa | null>(null);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [festaFreelancers, setFestaFreelancers] = useState<(FestaFreelancer & { freelancer: Freelancer })[]>([]);
   const [availableFreelancers, setAvailableFreelancers] = useState<Freelancer[]>([]);
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null);
   const [loading, setLoading] = useState(true);
+  const [highlightPagamentos, setHighlightPagamentos] = useState(false);
 
   useEffect(() => {
-    loadFestaData();
+    // Atualizar status automaticamente antes de carregar os dados
+    autoUpdateFestaStatus().then(() => {
+      loadFestaData();
+    });
   }, [params.id]);
+
+  // Detectar highlight de pagamentos e fazer scroll + animação
+  useEffect(() => {
+    const highlight = searchParams.get('highlight');
+    if (highlight === 'pagamentos' && !loading && pagamentoRef.current) {
+      // Aguardar um pouco para garantir que tudo foi renderizado
+      setTimeout(() => {
+        // Scroll suave até a seção de pagamentos
+        pagamentoRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center' 
+        });
+        
+        // Ativar animação de destaque
+        setHighlightPagamentos(true);
+        
+        // Remover animação após 3 segundos
+        setTimeout(() => {
+          setHighlightPagamentos(false);
+        }, 3000);
+      }, 500);
+    }
+  }, [searchParams, loading]);
 
   const loadFestaData = async () => {
     try {
@@ -299,7 +330,16 @@ export default function DetalheFestaPage() {
       </div>
 
       {/* Gerenciamento de Pagamentos */}
-      <PagamentoManager festaId={festa.id} orcamento={orcamento} />
+      <div 
+        ref={pagamentoRef}
+        className={`transition-all duration-500 ${
+          highlightPagamentos 
+            ? 'ring-4 ring-red-500 ring-opacity-50 rounded-lg shadow-2xl shadow-red-500/50 scale-[1.02]' 
+            : ''
+        }`}
+      >
+        <PagamentoManager festaId={festa.id} orcamento={orcamento} />
+      </div>
 
       {/* Gerenciamento de Freelancers */}
       <FreelancerManager

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PartyPopper, Users, DollarSign, Calendar, ArrowRight } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -19,7 +20,10 @@ export default function DashboardPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    loadStats();
+    // Atualizar status automaticamente ao carregar o dashboard
+    autoUpdateFestaStatus().then(() => {
+      loadStats();
+    });
   }, []);
 
   const loadStats = async () => {

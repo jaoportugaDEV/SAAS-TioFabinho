@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Festa, Freelancer } from "@/types";
+import { Festa } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -10,10 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Calendar, Clock, User, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
+import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
 
 export default function CalendarioPage() {
   const [festas, setFestas] = useState<Festa[]>([]);
-  const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -24,7 +24,10 @@ export default function CalendarioPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    loadData();
+    // Atualizar status automaticamente ao carregar o calendário
+    autoUpdateFestaStatus().then(() => {
+      loadData();
+    });
   }, [selectedMonth]);
 
   const loadData = async () => {
@@ -43,17 +46,7 @@ export default function CalendarioPage() {
 
       if (festasError) throw festasError;
 
-      // Carregar freelancers ativos
-      const { data: freelancersData, error: freelancersError } = await supabase
-        .from("freelancers")
-        .select("*")
-        .eq("ativo", true)
-        .order("nome");
-
-      if (freelancersError) throw freelancersError;
-
       setFestas(festasData || []);
-      setFreelancers(freelancersData || []);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -89,15 +82,6 @@ export default function CalendarioPage() {
   const daysInMonth = new Date(Number(year), Number(month), 0).getDate();
   const firstDayOfMonth = new Date(Number(year), Number(month) - 1, 1).getDay();
 
-  const funcaoLabels: Record<string, string> = {
-    monitor: "Monitor",
-    cozinheira: "Cozinheira",
-    fotografo: "Fotógrafo",
-    garcom: "Garçom",
-    recepcao: "Recepção",
-    outros: "Outros",
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -130,9 +114,9 @@ export default function CalendarioPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Calendário */}
-        <Card className="lg:col-span-2">
+        <Card>
           <CardHeader>
             <CardTitle>
               {new Date(selectedMonth + "-01").toLocaleDateString("pt-BR", {
@@ -226,45 +210,6 @@ export default function CalendarioPage() {
             </div>
           </CardContent>
         </Card>
-
-        {/* Freelancers Disponíveis */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Freelancers Ativos</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {freelancers.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhum freelancer ativo</p>
-            ) : (
-              <div className="space-y-3">
-                {freelancers.map((freelancer) => (
-                  <div
-                    key={freelancer.id}
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50"
-                  >
-                    <Avatar className="w-10 h-10">
-                      {freelancer.foto_url ? (
-                        <AvatarImage src={freelancer.foto_url} alt={freelancer.nome} />
-                      ) : (
-                        <AvatarFallback className="bg-primary text-white text-sm">
-                          {freelancer.nome.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {freelancer.nome}
-                      </p>
-                      <Badge variant="secondary" className="text-xs">
-                        {funcaoLabels[freelancer.funcao]}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Dialog de Festas do Dia */}
@@ -284,8 +229,8 @@ export default function CalendarioPage() {
               const statusLabels: Record<string, { label: string; color: string }> = {
                 planejamento: { label: "Planejamento", color: "bg-yellow-100 text-yellow-800" },
                 confirmada: { label: "Confirmada", color: "bg-green-100 text-green-800" },
-                em_andamento: { label: "Em Andamento", color: "bg-blue-100 text-blue-800" },
-                concluida: { label: "Concluída", color: "bg-gray-100 text-gray-800" },
+                encerrada_pendente: { label: "Encerrada - Pag. Pendente", color: "bg-orange-100 text-orange-800" },
+                encerrada: { label: "Encerrada", color: "bg-gray-100 text-gray-800" },
                 cancelada: { label: "Cancelada", color: "bg-red-100 text-red-800" },
               };
 
@@ -380,29 +325,57 @@ export default function CalendarioPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {festas.map((festa) => (
-                <Link
-                  key={festa.id}
-                  href={`/dashboard/festas/${festa.id}`}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                >
-                  <div>
-                    <p className="font-semibold">{festa.titulo}</p>
-                    <p className="text-sm text-gray-600">{festa.cliente_nome}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      {formatDate(festa.data)}
-                      {festa.horario && (
-                        <span className="text-primary ml-1">às {festa.horario}</span>
-                      )}
-                    </p>
-                    {festa.tema && (
-                      <p className="text-xs text-gray-500">{festa.tema}</p>
-                    )}
-                  </div>
-                </Link>
-              ))}
+              {[...festas]
+                .sort((a, b) => {
+                  // Ordenar por data e horário (mais próximas primeiro)
+                  const dateA = new Date(a.data + (a.horario ? `T${a.horario}` : 'T00:00:00')).getTime();
+                  const dateB = new Date(b.data + (b.horario ? `T${b.horario}` : 'T00:00:00')).getTime();
+                  return dateA - dateB;
+                })
+                .map((festa) => {
+                  const dataFesta = new Date(festa.data + (festa.horario ? `T${festa.horario}` : 'T23:59:59'));
+                  const agora = new Date();
+                  const festaPassada = dataFesta < agora;
+
+                  return (
+                    <Link
+                      key={festa.id}
+                      href={`/dashboard/festas/${festa.id}`}
+                      className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-all ${
+                        festaPassada ? 'opacity-60 bg-gray-50' : ''
+                      }`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className={`font-semibold ${festaPassada ? 'text-gray-500' : ''}`}>
+                            {festa.titulo}
+                          </p>
+                          {festaPassada && (
+                            <Badge variant="outline" className="text-xs bg-gray-100 text-gray-600">
+                              Realizada
+                            </Badge>
+                          )}
+                        </div>
+                        <p className={`text-sm ${festaPassada ? 'text-gray-400' : 'text-gray-600'}`}>
+                          {festa.cliente_nome}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-medium ${festaPassada ? 'text-gray-500' : ''}`}>
+                          {formatDate(festa.data)}
+                          {festa.horario && (
+                            <span className={`ml-1 ${festaPassada ? 'text-gray-500' : 'text-primary'}`}>
+                              às {festa.horario}
+                            </span>
+                          )}
+                        </p>
+                        {festa.tema && (
+                          <p className="text-xs text-gray-500">{festa.tema}</p>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
             </div>
           </CardContent>
         </Card>

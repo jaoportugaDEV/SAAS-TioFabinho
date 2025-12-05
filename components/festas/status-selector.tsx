@@ -13,7 +13,8 @@ interface StatusSelectorProps {
 const statusLabels: Record<string, string> = {
   planejamento: "Planejamento",
   confirmada: "Confirmada",
-  concluida: "Concluída",
+  encerrada_pendente: "Encerrada - Pag. Pendente",
+  encerrada: "Encerrada",
 };
 
 export function StatusSelector({ festaId, currentStatus }: StatusSelectorProps) {
@@ -42,7 +43,8 @@ export function StatusSelector({ festaId, currentStatus }: StatusSelectorProps) 
     >
       <option value="planejamento">{statusLabels.planejamento}</option>
       <option value="confirmada">{statusLabels.confirmada}</option>
-      <option value="concluida">{statusLabels.concluida}</option>
+      <option value="encerrada_pendente">{statusLabels.encerrada_pendente}</option>
+      <option value="encerrada">{statusLabels.encerrada}</option>
     </Select>
   );
 }

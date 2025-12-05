@@ -146,17 +146,20 @@ export default function FreelancersPage() {
                   <h3 className="font-semibold text-lg text-gray-900 truncate">
                     {freelancer.nome}
                   </h3>
-                  <Badge variant="secondary" className="mt-1">
-                    {funcaoLabels[freelancer.funcao]}
-                  </Badge>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <Badge variant="secondary">
+                      {funcaoLabels[freelancer.funcao]}
+                    </Badge>
+                    <Badge 
+                      variant={freelancer.ativo ? "default" : "destructive"}
+                      className={freelancer.ativo ? "bg-green-600 hover:bg-green-700" : ""}
+                    >
+                      {freelancer.ativo ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-gray-600 mt-2">
                     {formatPhone(freelancer.whatsapp)}
                   </p>
-                  {!freelancer.ativo && (
-                    <Badge variant="destructive" className="mt-2">
-                      Inativo
-                    </Badge>
-                  )}
                 </div>
               </div>
 

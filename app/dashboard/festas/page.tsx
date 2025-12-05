@@ -8,16 +8,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock } from "lucide-react";
+import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock, AlertCircle, DollarSign } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
+
+// Interface estendida para incluir informações de pagamento
+interface FestaComPagamentos extends Festa {
+  clientePagou?: boolean;
+  freelancersReceberam?: boolean;
+}
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   planejamento: { label: "Planejamento", color: "bg-blue-100 text-blue-800" },
   confirmada: { label: "Confirmada", color: "bg-green-100 text-green-800" },
-  concluida: { label: "Concluída", color: "bg-gray-100 text-gray-800" },
+  encerrada_pendente: { label: "Encerrada - Pag. Pendente", color: "bg-orange-100 text-orange-800" },
+  encerrada: { label: "Encerrada", color: "bg-gray-100 text-gray-800" },
 };
 
-const statusOrder = ["planejamento", "confirmada", "concluida"] as const;
+const statusOrder = ["planejamento", "confirmada", "encerrada_pendente", "encerrada"] as const;
 
 const statusPagamentoLabels: Record<string, { label: string; color: string; icon: any }> = {
   pendente: { label: "Pagamento Pendente", color: "bg-red-100 text-red-800 border-red-200", icon: Clock },
@@ -26,13 +34,17 @@ const statusPagamentoLabels: Record<string, { label: string; color: string; icon
 };
 
 export default function FestasPage() {
-  const [festas, setFestas] = useState<Festa[]>([]);
+  const [festas, setFestas] = useState<FestaComPagamentos[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("todos");
   const supabase = createClient();
 
   useEffect(() => {
-    loadFestas();
+    // Atualizar status automaticamente antes de carregar as festas
+    autoUpdateFestaStatus().then(() => {
+      loadFestas();
+    });
   }, []);
 
   const loadFestas = async () => {
@@ -43,7 +55,38 @@ export default function FestasPage() {
         .order("data", { ascending: false });
 
       if (error) throw error;
-      setFestas(data || []);
+      
+      // Para cada festa, verificar o status de pagamentos
+      const festasComPagamentos = await Promise.all(
+        (data || []).map(async (festa) => {
+          let clientePagou = false;
+          let freelancersReceberam = false;
+
+          // Verificar pagamento do cliente (orçamento/parcelas)
+          const { data: orcamento } = await supabase
+            .from("orcamentos")
+            .select("status_pagamento")
+            .eq("festa_id", festa.id)
+            .single();
+
+          if (orcamento) {
+            clientePagou = orcamento.status_pagamento === "pago_total";
+          }
+
+          // Verificar pagamento dos freelancers
+          if (festa.status_pagamento_freelancers) {
+            freelancersReceberam = festa.status_pagamento_freelancers === "pago";
+          }
+
+          return {
+            ...festa,
+            clientePagou,
+            freelancersReceberam
+          };
+        })
+      );
+
+      setFestas(festasComPagamentos);
     } catch (error) {
       console.error("Erro ao carregar festas:", error);
     } finally {
@@ -73,12 +116,18 @@ export default function FestasPage() {
     }
   };
 
-  const filteredFestas = festas.filter(
-    (f) =>
+  const filteredFestas = festas.filter((f) => {
+    // Filtro de busca por texto
+    const matchesSearch = 
       f.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       f.cliente_nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      f.tema?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      f.tema?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Filtro por status
+    const matchesStatus = statusFilter === "todos" || f.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   if (loading) {
     return (
@@ -118,6 +167,67 @@ export default function FestasPage() {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
         />
+      </div>
+
+      {/* Filtros por Status */}
+      <div className="flex flex-wrap gap-2">
+        <Badge
+          variant={statusFilter === "todos" ? "default" : "outline"}
+          className={`cursor-pointer transition-all ${
+            statusFilter === "todos" 
+              ? "bg-primary text-white hover:bg-primary/90" 
+              : "hover:bg-gray-100"
+          }`}
+          onClick={() => setStatusFilter("todos")}
+        >
+          Todos
+        </Badge>
+        <Badge
+          variant={statusFilter === "planejamento" ? "default" : "outline"}
+          className={`cursor-pointer transition-all ${
+            statusFilter === "planejamento" 
+              ? "bg-blue-500 text-white hover:bg-blue-600" 
+              : "hover:bg-blue-50"
+          }`}
+          onClick={() => setStatusFilter("planejamento")}
+        >
+          Planejamento
+        </Badge>
+        <Badge
+          variant={statusFilter === "confirmada" ? "default" : "outline"}
+          className={`cursor-pointer transition-all ${
+            statusFilter === "confirmada" 
+              ? "bg-green-500 text-white hover:bg-green-600" 
+              : "hover:bg-green-50"
+          }`}
+          onClick={() => setStatusFilter("confirmada")}
+        >
+          Confirmada
+        </Badge>
+        <Badge
+          variant={statusFilter === "encerrada_pendente" ? "default" : "outline"}
+          className={`cursor-pointer transition-all ${
+            statusFilter === "encerrada_pendente" 
+              ? "bg-orange-500 text-white hover:bg-orange-600" 
+              : "hover:bg-orange-50"
+          }`}
+          onClick={() => setStatusFilter("encerrada_pendente")}
+        >
+          <AlertCircle className="w-3 h-3 mr-1" />
+          Encerrada - Pag. Pendente
+        </Badge>
+        <Badge
+          variant={statusFilter === "encerrada" ? "default" : "outline"}
+          className={`cursor-pointer transition-all ${
+            statusFilter === "encerrada" 
+              ? "bg-gray-500 text-white hover:bg-gray-600" 
+              : "hover:bg-gray-50"
+          }`}
+          onClick={() => setStatusFilter("encerrada")}
+        >
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Encerrada
+        </Badge>
       </div>
 
       {/* Lista de Festas */}
@@ -185,6 +295,21 @@ export default function FestasPage() {
                             })()}
                             {statusPagamentoLabels[festa.status_pagamento_freelancers]?.label || 'Status Desconhecido'}
                           </Badge>
+                        )}
+                        
+                        {/* Alerta: Cliente pagou mas freelancers não receberam */}
+                        {festa.clientePagou && !festa.freelancersReceberam && (
+                          <Link
+                            href={`/dashboard/pagamentos?festa=${festa.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Badge 
+                              className="bg-red-500 text-white border-red-600 cursor-pointer hover:bg-red-600 transition-all animate-pulse"
+                            >
+                              <DollarSign className="w-3 h-3 mr-1" />
+                              Pagar Freelancers!
+                            </Badge>
+                          </Link>
                         )}
                       </div>
                     </div>
