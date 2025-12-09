@@ -278,7 +278,7 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
                 orcamento: {
                   ...formData.orcamento,
                   forma_pagamento: e.target.value,
-                  quantidade_parcelas: e.target.value === 'avista' ? 1 : (formData.orcamento.quantidade_parcelas || 2),
+                  quantidade_parcelas: e.target.value === 'avista' ? 1 : 0,
                 },
               })
             }
@@ -295,7 +295,7 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
               <Label htmlFor="quantidade_parcelas">Quantidade de Parcelas</Label>
               <select
                 id="quantidade_parcelas"
-                value={formData.orcamento.quantidade_parcelas || 2}
+                value={formData.orcamento.quantidade_parcelas || ""}
                 onChange={(e) =>
                   setFormData({
                     ...formData,
@@ -307,6 +307,7 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
                 }
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
+                <option value="" disabled>Selecione a quantidade</option>
                 {Array.from({ length: 11 }, (_, i) => i + 2).map((num) => (
                   <option key={num} value={num}>
                     {num}x
@@ -339,7 +340,7 @@ export function StepOrcamento({ formData, setFormData }: StepOrcamentoProps) {
                 placeholder="0.00"
               />
             </div>
-            {formData.orcamento.quantidade_parcelas > 1 && (
+            {formData.orcamento.quantidade_parcelas >= 2 && (
               <div className="sm:col-span-2 text-sm text-gray-700">
                 <p className="font-semibold mb-1">Resumo do Parcelamento:</p>
                 <p>

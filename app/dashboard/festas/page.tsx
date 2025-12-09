@@ -8,14 +8,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock, AlertCircle, DollarSign } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock, AlertCircle, DollarSign, Users } from "lucide-react";
+import { formatDate, festaJaComecou } from "@/lib/utils";
 import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
 
 // Interface estendida para incluir informações de pagamento
 interface FestaComPagamentos extends Festa {
   clientePagou?: boolean;
   freelancersReceberam?: boolean;
+  statusPagamentoCliente?: 'pendente' | 'pago_parcial' | 'pago_total';
 }
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -60,6 +61,7 @@ export default function FestasPage() {
         (data || []).map(async (festa) => {
           let clientePagou = false;
           let freelancersReceberam = false;
+          let statusPagamentoCliente: 'pendente' | 'pago_parcial' | 'pago_total' = 'pendente';
 
           // Verificar pagamento do cliente (orçamento/parcelas)
           const { data: orcamento } = await supabase
@@ -69,6 +71,7 @@ export default function FestasPage() {
             .single();
 
           if (orcamento) {
+            statusPagamentoCliente = orcamento.status_pagamento as 'pendente' | 'pago_parcial' | 'pago_total';
             clientePagou = orcamento.status_pagamento === "pago_total";
           }
 
@@ -80,7 +83,8 @@ export default function FestasPage() {
           return {
             ...festa,
             clientePagou,
-            freelancersReceberam
+            freelancersReceberam,
+            statusPagamentoCliente
           };
         })
       );
@@ -336,27 +340,58 @@ export default function FestasPage() {
                       </Badge>
                     </div>
 
-                    {/* Badges de Pagamento */}
+                    {/* Badges de Pagamento - Separados por Cliente e Freelancers */}
                     <div className="flex flex-wrap gap-1.5 mt-2">
-                      {festa.status_pagamento_freelancers && (
+                      {/* Badge: Pagamento do Cliente */}
+                      {festa.statusPagamentoCliente && (
                         <Badge 
-                          className={`${statusPagamentoLabels[festa.status_pagamento_freelancers]?.color || 'bg-gray-100 text-gray-800'} border text-xs`}
+                          className={`border text-xs ${
+                            festa.statusPagamentoCliente === 'pago_total' 
+                              ? 'bg-green-100 text-green-800 border-green-200'
+                              : festa.statusPagamentoCliente === 'pago_parcial'
+                              ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                              : 'bg-red-100 text-red-800 border-red-200'
+                          }`}
                         >
-                          {(() => {
-                            const Icon = statusPagamentoLabels[festa.status_pagamento_freelancers]?.icon;
-                            return Icon ? <Icon className="w-3 h-3 mr-1" /> : null;
-                          })()}
-                          <span className="hidden sm:inline">{statusPagamentoLabels[festa.status_pagamento_freelancers]?.label || 'Status Desconhecido'}</span>
+                          <DollarSign className="w-3 h-3 mr-1" />
+                          <span className="hidden sm:inline">
+                            Cliente: {
+                              festa.statusPagamentoCliente === 'pago_total' ? 'Pago'
+                              : festa.statusPagamentoCliente === 'pago_parcial' ? 'Parcial'
+                              : 'Pendente'
+                            }
+                          </span>
                           <span className="sm:hidden">
-                            {festa.status_pagamento_freelancers === 'pendente' && 'Pend.'}
-                            {festa.status_pagamento_freelancers === 'parcial' && 'Parcial'}
-                            {festa.status_pagamento_freelancers === 'pago' && 'Pago'}
+                            🙋 {
+                              festa.statusPagamentoCliente === 'pago_total' ? 'Pago'
+                              : festa.statusPagamentoCliente === 'pago_parcial' ? 'Parc.'
+                              : 'Pend.'
+                            }
                           </span>
                         </Badge>
                       )}
                       
-                      {/* Alerta: Cliente pagou mas freelancers não receberam */}
-                      {festa.clientePagou && !festa.freelancersReceberam && (
+                      {/* Badge: Pagamento dos Freelancers */}
+                      {festa.status_pagamento_freelancers && (
+                        <Badge 
+                          className={`border text-xs ${
+                            festa.status_pagamento_freelancers === 'pago'
+                              ? 'bg-green-100 text-green-800 border-green-200'
+                              : 'bg-orange-100 text-orange-800 border-orange-200'
+                          }`}
+                        >
+                          <Users className="w-3 h-3 mr-1" />
+                          <span className="hidden sm:inline">
+                            Freelancers: {festa.status_pagamento_freelancers === 'pago' ? 'Pago' : 'Pendente'}
+                          </span>
+                          <span className="sm:hidden">
+                            👥 {festa.status_pagamento_freelancers === 'pago' ? 'Pago' : 'Pend.'}
+                          </span>
+                        </Badge>
+                      )}
+                      
+                      {/* Alerta: Freelancers não receberam e festa já começou - independente do cliente ter pago */}
+                      {!festa.freelancersReceberam && festaJaComecou(festa.data, festa.horario) && (
                         <Link
                           href={`/dashboard/pagamentos?festa=${festa.id}`}
                           onClick={(e) => e.stopPropagation()}

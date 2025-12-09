@@ -53,3 +53,23 @@ export function calcularTotalOrcamento(
   return subtotal - desconto + acrescimo;
 }
 
+/**
+ * Verifica se a festa já começou baseado na data e horário
+ * @param festaData - Data da festa no formato YYYY-MM-DD
+ * @param festaHorario - Horário da festa no formato HH:MM (opcional)
+ * @returns true se a festa já começou, false caso contrário
+ */
+export function festaJaComecou(festaData: string, festaHorario?: string | null): boolean {
+  const now = new Date();
+  
+  if (festaHorario) {
+    // Se tem horário, criar data completa com horário
+    const dataFesta = new Date(`${festaData}T${festaHorario}`);
+    return dataFesta < now;
+  } else {
+    // Se não tem horário, considerar que começa às 00:00 do dia
+    const dataFesta = new Date(`${festaData}T00:00:00`);
+    return dataFesta < now;
+  }
+}
+

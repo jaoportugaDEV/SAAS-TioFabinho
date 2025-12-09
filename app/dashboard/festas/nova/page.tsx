@@ -52,7 +52,7 @@ export default function NovaFestaPage() {
       desconto: 0,
       acrescimo: 0,
       forma_pagamento: "avista" as "avista" | "parcelado",
-      quantidade_parcelas: 1,
+      quantidade_parcelas: 0,
       entrada: 0,
     },
     // Step 5
@@ -105,6 +105,12 @@ export default function NovaFestaPage() {
     // Validar todos os campos obrigatórios antes de submeter
     if (!validateStep(1) || !validateStep(2)) {
       alert("Por favor, preencha todos os campos obrigatórios antes de criar a festa.");
+      return;
+    }
+
+    // Validar parcelamento se for pagamento parcelado
+    if (formData.orcamento.forma_pagamento === 'parcelado' && formData.orcamento.quantidade_parcelas < 2) {
+      alert("Por favor, selecione a quantidade de parcelas para pagamento parcelado.");
       return;
     }
 

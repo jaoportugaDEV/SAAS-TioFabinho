@@ -9,6 +9,7 @@ import { DollarSign, CheckCircle, Clock, AlertTriangle, Plus } from "lucide-reac
 import { formatDate } from "@/lib/utils";
 import { ParcelaPagamento, Orcamento } from "@/types";
 import { MarcarPagoDialog } from "@/components/parcelas/marcar-pago-dialog";
+import { MarcarAvistaPagoDialog } from "@/components/parcelas/marcar-avista-pago-dialog";
 
 interface PagamentoManagerProps {
   festaId: string;
@@ -20,6 +21,7 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
   const [loading, setLoading] = useState(true);
   const [selectedParcela, setSelectedParcela] = useState<ParcelaPagamento | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [avistaDialogOpen, setAvistaDialogOpen] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -68,6 +70,12 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
     setSelectedParcela(null);
   };
 
+  const handleAvistaAtualizado = () => {
+    setAvistaDialogOpen(false);
+    // Recarregar a página para mostrar o status atualizado
+    window.location.reload();
+  };
+
   const getStatusBadge = (status: string, dataVencimento: string) => {
     const hoje = new Date().toISOString().split('T')[0];
     const isAtrasada = status === 'pendente' && dataVencimento < hoje;
@@ -99,12 +107,24 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
   };
 
   const calcularProgresso = () => {
+    // Se for pagamento à vista
+    if (orcamento?.forma_pagamento === 'avista') {
+      return orcamento?.status_pagamento === 'pago_total' ? 100 : 0;
+    }
+    
+    // Para pagamento parcelado
     if (parcelas.length === 0) return 0;
     const pagas = parcelas.filter((p) => p.status === 'paga').length;
     return (pagas / parcelas.length) * 100;
   };
 
   const calcularTotalPago = () => {
+    // Se for pagamento à vista e já foi pago, retorna o total do orçamento
+    if (orcamento?.forma_pagamento === 'avista' && orcamento?.status_pagamento === 'pago_total') {
+      return Number(orcamento.total);
+    }
+    
+    // Para pagamento parcelado, soma as parcelas pagas
     const totalParcelas = parcelas
       .filter((p) => p.status === 'paga')
       .reduce((acc, p) => acc + Number(p.valor), 0);
@@ -118,6 +138,17 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
   };
 
   const calcularTotalPendente = () => {
+    // Se for pagamento à vista e já foi pago, não há pendente
+    if (orcamento?.forma_pagamento === 'avista' && orcamento?.status_pagamento === 'pago_total') {
+      return 0;
+    }
+    
+    // Se for pagamento à vista e ainda não foi pago, o total está pendente
+    if (orcamento?.forma_pagamento === 'avista') {
+      return Number(orcamento.total);
+    }
+    
+    // Para pagamento parcelado, soma as parcelas não pagas
     return parcelas
       .filter((p) => p.status !== 'paga')
       .reduce((acc, p) => acc + Number(p.valor), 0);
@@ -194,14 +225,17 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
           </div>
 
           {/* Barra de Progresso */}
-          {parcelas.length > 0 && (
+          {(parcelas.length > 0 || orcamento.forma_pagamento === 'avista') && (
             <div>
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-1 sm:gap-2 mb-2">
                 <span className="text-xs sm:text-sm font-medium text-gray-700">
                   Progresso do Pagamento
                 </span>
                 <span className="text-xs sm:text-sm text-gray-600">
-                  {parcelas.filter((p) => p.status === 'paga').length} de {parcelas.length} pagas
+                  {orcamento.forma_pagamento === 'avista' 
+                    ? (orcamento.status_pagamento === 'pago_total' ? 'Pago' : 'Pendente')
+                    : `${parcelas.filter((p) => p.status === 'paga').length} de ${parcelas.length} pagas`
+                  }
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
@@ -272,15 +306,37 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
           ) : (
             <div className="text-center py-8 bg-gray-50 rounded-lg">
               <DollarSign className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">
-                {orcamento.forma_pagamento === 'avista'
-                  ? 'Pagamento à vista - Sem parcelas'
-                  : 'Nenhuma parcela cadastrada'}
-              </p>
-              {orcamento.forma_pagamento === 'parcelado' && (
-                <p className="text-sm text-gray-500">
-                  As parcelas serão criadas automaticamente ao salvar o orçamento.
-                </p>
+              {orcamento.forma_pagamento === 'avista' ? (
+                <>
+                  <p className="text-gray-600 mb-4">Pagamento à vista - Sem parcelas</p>
+                  {orcamento.status_pagamento === 'pago_total' ? (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 max-w-sm mx-auto">
+                      <p className="text-sm text-green-800 font-medium flex items-center justify-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Pagamento Confirmado
+                      </p>
+                      {orcamento.observacoes && (
+                        <p className="text-xs text-green-700 mt-2">{orcamento.observacoes}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => setAvistaDialogOpen(true)}
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Marcar como Pago
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-600 mb-2">Nenhuma parcela cadastrada</p>
+                  <p className="text-sm text-gray-500">
+                    As parcelas serão criadas automaticamente ao salvar o orçamento.
+                  </p>
+                </>
               )}
             </div>
           )}
@@ -295,6 +351,13 @@ export function PagamentoManager({ festaId, orcamento }: PagamentoManagerProps) 
           onSuccess={handleParcelaAtualizada}
         />
       )}
+
+      <MarcarAvistaPagoDialog
+        open={avistaDialogOpen}
+        onOpenChange={setAvistaDialogOpen}
+        orcamento={orcamento}
+        onSuccess={handleAvistaAtualizado}
+      />
     </>
   );
 }
