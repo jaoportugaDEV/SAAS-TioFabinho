@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock, AlertCircle, DollarSign, Users } from "lucide-react";
 import { formatDate, festaJaComecou } from "@/lib/utils";
-import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
+import { autoUpdateFestaStatus, checkAndUpdatePagamentosCompletos } from "@/app/actions/auto-update-status";
 
 // Interface estendida para incluir informações de pagamento
 interface FestaComPagamentos extends Festa {
@@ -22,11 +22,12 @@ interface FestaComPagamentos extends Festa {
 const statusLabels: Record<string, { label: string; color: string }> = {
   planejamento: { label: "Planejamento", color: "bg-blue-100 text-blue-800" },
   confirmada: { label: "Confirmada", color: "bg-green-100 text-green-800" },
+  acontecendo: { label: "Acontecendo Agora", color: "bg-yellow-100 text-yellow-800" },
   encerrada_pendente: { label: "Encerrada - Pag. Pendente", color: "bg-orange-100 text-orange-800" },
   encerrada: { label: "Encerrada", color: "bg-gray-100 text-gray-800" },
 };
 
-const statusOrder = ["planejamento", "confirmada", "encerrada_pendente", "encerrada"] as const;
+const statusOrder = ["planejamento", "confirmada", "acontecendo", "encerrada_pendente", "encerrada"] as const;
 
 const statusPagamentoLabels: Record<string, { label: string; color: string; icon: any }> = {
   pendente: { label: "Pagamento Pendente", color: "bg-red-100 text-red-800 border-red-200", icon: Clock },
@@ -44,7 +45,10 @@ export default function FestasPage() {
   useEffect(() => {
     // Atualizar status automaticamente antes de carregar as festas
     autoUpdateFestaStatus().then(() => {
-      loadFestas();
+      // Verificar se festas com pagamentos completos devem mudar para "encerrada"
+      checkAndUpdatePagamentosCompletos().then(() => {
+        loadFestas();
+      });
     });
   }, []);
 
@@ -134,15 +138,15 @@ export default function FestasPage() {
         return;
       }
 
-      const currentIndex = statusOrder.indexOf(currentStatus as any);
-      if (currentIndex === -1) {
-        console.error("Status atual não encontrado:", currentStatus);
-        alert("Erro: Status atual inválido");
+      // Apenas permitir toggle manual entre planejamento e confirmada
+      // Os outros status (acontecendo, encerrada_pendente, encerrada) são automáticos
+      if (currentStatus !== "planejamento" && currentStatus !== "confirmada") {
+        alert("Este status é gerenciado automaticamente pelo sistema.");
         return;
       }
 
-      const nextIndex = (currentIndex + 1) % statusOrder.length;
-      const nextStatus = statusOrder[nextIndex];
+      // Toggle entre planejamento e confirmada
+      const nextStatus = currentStatus === "planejamento" ? "confirmada" : "planejamento";
 
       console.log("Alterando status de", currentStatus, "para", nextStatus);
 
@@ -258,6 +262,18 @@ export default function FestasPage() {
           Confirmada
         </Badge>
         <Badge
+          variant={statusFilter === "acontecendo" ? "default" : "outline"}
+          className={`cursor-pointer transition-all text-xs sm:text-sm px-2 py-1 ${
+            statusFilter === "acontecendo" 
+              ? "bg-yellow-500 text-white hover:bg-yellow-600" 
+              : "hover:bg-yellow-50"
+          }`}
+          onClick={() => setStatusFilter("acontecendo")}
+        >
+          <span className="hidden sm:inline">Acontecendo Agora</span>
+          <span className="sm:hidden">Acontecendo</span>
+        </Badge>
+        <Badge
           variant={statusFilter === "encerrada_pendente" ? "default" : "outline"}
           className={`cursor-pointer transition-all text-xs sm:text-sm px-2 py-1 ${
             statusFilter === "encerrada_pendente" 
@@ -328,15 +344,26 @@ export default function FestasPage() {
                         )}
                       </div>
                       <Badge 
-                        className={`${statusInfo.color} cursor-pointer hover:opacity-80 transition-opacity text-xs whitespace-nowrap flex-shrink-0`}
+                        className={`${statusInfo.color} ${
+                          festa.status === "planejamento" || festa.status === "confirmada"
+                            ? "cursor-pointer hover:opacity-80 transition-opacity"
+                            : "cursor-default"
+                        } text-xs whitespace-nowrap flex-shrink-0`}
                         onClick={(e) => {
                           e.preventDefault();
                           e.stopPropagation();
-                          toggleStatus(festa.id, festa.status);
+                          if (festa.status === "planejamento" || festa.status === "confirmada") {
+                            toggleStatus(festa.id, festa.status);
+                          }
                         }}
-                        title="Clique para alterar o status"
+                        title={
+                          festa.status === "planejamento" || festa.status === "confirmada"
+                            ? "Clique para alterar entre Planejamento e Confirmada"
+                            : "Status automático - não pode ser alterado manualmente"
+                        }
                       >
                         {statusInfo.label}
+                        {festa.status !== "planejamento" && festa.status !== "confirmada" && " 🤖"}
                       </Badge>
                     </div>
 

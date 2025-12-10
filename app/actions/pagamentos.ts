@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { checkAndUpdatePagamentosCompletos } from "./auto-update-status";
 
 // Atualizar valor acordado de um freelancer em uma festa específica
 export async function updateValorFreelancerFesta(
@@ -147,6 +148,9 @@ export async function atualizarStatusPagamentoFesta(festaId: string) {
     console.error("Erro ao atualizar status geral:", updateError);
     return { success: false, error: updateError.message };
   }
+
+  // Verificar se a festa pode mudar de "encerrada_pendente" para "encerrada"
+  await checkAndUpdatePagamentosCompletos();
 
   revalidatePath(`/dashboard/festas/${festaId}`);
   revalidatePath("/dashboard/festas");

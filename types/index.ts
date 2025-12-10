@@ -1,6 +1,6 @@
 export type FuncaoFreelancer = 'monitor' | 'cozinheira' | 'fotografo' | 'garcom' | 'recepcao' | 'outros';
 
-export type StatusFesta = 'planejamento' | 'confirmada' | 'encerrada_pendente' | 'encerrada' | 'cancelada';
+export type StatusFesta = 'planejamento' | 'confirmada' | 'acontecendo' | 'encerrada_pendente' | 'encerrada' | 'cancelada';
 
 export type StatusPagamento = 'pendente' | 'pago_parcial' | 'pago_total';
 
@@ -33,6 +33,7 @@ export interface Festa {
   titulo: string;
   data: string;
   horario?: string;
+  duracao_horas?: number; // Duração da festa em horas (padrão: 4.5)
   tema: string;
   local: string;
   cliente_nome: string;

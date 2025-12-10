@@ -25,6 +25,7 @@ import { CollapsibleSection } from "@/components/ui/collapsible-section";
 const statusLabels: Record<string, { label: string; color: string }> = {
   planejamento: { label: "Planejamento", color: "bg-blue-100 text-blue-800" },
   confirmada: { label: "Confirmada", color: "bg-green-100 text-green-800" },
+  acontecendo: { label: "Acontecendo Agora", color: "bg-yellow-100 text-yellow-800" },
   encerrada_pendente: { label: "Encerrada - Pag. Pendente", color: "bg-orange-100 text-orange-800" },
   encerrada: { label: "Encerrada", color: "bg-gray-100 text-gray-800" },
 };

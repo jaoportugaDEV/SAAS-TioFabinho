@@ -13,6 +13,7 @@ interface StatusSelectorProps {
 const statusLabels: Record<string, string> = {
   planejamento: "Planejamento",
   confirmada: "Confirmada",
+  acontecendo: "Acontecendo Agora",
   encerrada_pendente: "Encerrada - Pag. Pendente",
   encerrada: "Encerrada",
 };
@@ -22,6 +23,12 @@ export function StatusSelector({ festaId, currentStatus }: StatusSelectorProps) 
   const [updating, setUpdating] = useState(false);
 
   const handleStatusChange = async (newStatus: StatusFesta) => {
+    // Apenas permitir alteração manual entre planejamento e confirmada
+    if (newStatus !== "planejamento" && newStatus !== "confirmada") {
+      alert("Este status é gerenciado automaticamente pelo sistema.");
+      return;
+    }
+
     setUpdating(true);
     const result = await updateFestaStatus(festaId, newStatus);
     
@@ -34,18 +41,29 @@ export function StatusSelector({ festaId, currentStatus }: StatusSelectorProps) 
     setUpdating(false);
   };
 
+  // Se o status atual não é planejamento ou confirmada, desabilitar o select
+  const isAutoStatus = status !== "planejamento" && status !== "confirmada";
+
   return (
-    <Select
-      value={status}
-      onChange={(e) => handleStatusChange(e.target.value as StatusFesta)}
-      disabled={updating}
-      className="w-48"
-    >
-      <option value="planejamento">{statusLabels.planejamento}</option>
-      <option value="confirmada">{statusLabels.confirmada}</option>
-      <option value="encerrada_pendente">{statusLabels.encerrada_pendente}</option>
-      <option value="encerrada">{statusLabels.encerrada}</option>
-    </Select>
+    <div className="space-y-1">
+      <Select
+        value={status}
+        onChange={(e) => handleStatusChange(e.target.value as StatusFesta)}
+        disabled={updating || isAutoStatus}
+        className="w-48"
+      >
+        <option value="planejamento">{statusLabels.planejamento}</option>
+        <option value="confirmada">{statusLabels.confirmada}</option>
+        <option value="acontecendo" disabled>{statusLabels.acontecendo} 🤖</option>
+        <option value="encerrada_pendente" disabled>{statusLabels.encerrada_pendente} 🤖</option>
+        <option value="encerrada" disabled>{statusLabels.encerrada} 🤖</option>
+      </Select>
+      {isAutoStatus && (
+        <p className="text-xs text-gray-500">
+          Status gerenciado automaticamente pelo sistema
+        </p>
+      )}
+    </div>
   );
 }
 

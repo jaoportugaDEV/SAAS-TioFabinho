@@ -81,6 +81,14 @@ export function MarcarPagoDialog({
 
       if (orcamentoError) throw orcamentoError;
 
+      // Atualizar status_pagamento_cliente na tabela festas
+      const { error: festaError } = await supabase
+        .from("festas")
+        .update({ status_pagamento_cliente: novoStatus })
+        .eq("id", parcela.festa_id);
+
+      if (festaError) throw festaError;
+
       onSuccess();
     } catch (error) {
       console.error("Erro ao marcar parcela como paga:", error);

@@ -3,18 +3,20 @@
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Atualiza automaticamente o status de festas confirmadas para "encerrada" ou "encerrada_pendente"
- * quando a data/hora da festa já passou, considerando o status dos pagamentos
+ * Atualiza automaticamente o status das festas baseado em tempo e pagamentos:
+ * - planejamento/confirmada → acontecendo (quando a festa começa)
+ * - acontecendo → encerrada/encerrada_pendente (quando a festa termina)
+ * - Considera duração de 4.5 horas (ou duracao_horas customizada)
  */
 export async function autoUpdateFestaStatus() {
   const supabase = await createClient();
 
   try {
-    // Buscar todas as festas com status "confirmada"
+    // Buscar todas as festas que não estão encerradas ou canceladas
     const { data: festas, error: fetchError } = await supabase
       .from("festas")
-      .select("id, data, horario, status_pagamento_freelancers, status_pagamento_cliente")
-      .eq("status", "confirmada");
+      .select("id, data, horario, duracao_horas, status, status_pagamento_freelancers, status_pagamento_cliente")
+      .in("status", ["planejamento", "confirmada", "acontecendo"]);
 
     if (fetchError) {
       console.error("Erro ao buscar festas:", fetchError);
@@ -28,28 +30,43 @@ export async function autoUpdateFestaStatus() {
     const now = new Date();
     let updatedCount = 0;
 
-    // Verificar quais festas já passaram e atualizar com status correto
+    // Processar cada festa
     for (const festa of festas) {
-      let dataFesta: Date;
-
+      const duracaoHoras = festa.duracao_horas || 4.5;
+      
+      // Calcular data/hora de início
+      let dataInicio: Date;
       if (festa.horario) {
-        // Se tem horário, criar data completa com horário
-        dataFesta = new Date(`${festa.data}T${festa.horario}`);
+        dataInicio = new Date(`${festa.data}T${festa.horario}`);
       } else {
-        // Se não tem horário, considerar o final do dia (23:59:59)
-        dataFesta = new Date(`${festa.data}T23:59:59`);
+        // Se não tem horário, considerar meio-dia como padrão
+        dataInicio = new Date(`${festa.data}T12:00:00`);
       }
 
-      // Se a data/hora da festa já passou
-      if (dataFesta < now) {
-        // Verificar se todos os pagamentos foram feitos
-        const clientePagou = festa.status_pagamento_cliente === 'pago_total';
-        const freelancersReceberam = festa.status_pagamento_freelancers === 'pago';
+      // Calcular data/hora de término (início + duração)
+      const dataTermino = new Date(dataInicio.getTime() + duracaoHoras * 60 * 60 * 1000);
 
-        // Definir status baseado nos pagamentos
-        const novoStatus = (clientePagou && freelancersReceberam) ? 'encerrada' : 'encerrada_pendente';
+      let novoStatus = festa.status;
 
-        // Atualizar status da festa
+      // Determinar o novo status baseado no tempo
+      if (now >= dataTermino) {
+        // Festa já terminou
+        if (festa.status !== "encerrada" && festa.status !== "encerrada_pendente") {
+          // Verificar pagamentos para decidir o status
+          const clientePagou = festa.status_pagamento_cliente === 'pago_total';
+          const freelancersReceberam = festa.status_pagamento_freelancers === 'pago';
+          
+          novoStatus = (clientePagou && freelancersReceberam) ? 'encerrada' : 'encerrada_pendente';
+        }
+      } else if (now >= dataInicio && now < dataTermino) {
+        // Festa está acontecendo agora
+        if (festa.status === "planejamento" || festa.status === "confirmada") {
+          novoStatus = 'acontecendo';
+        }
+      }
+
+      // Atualizar status se mudou
+      if (novoStatus !== festa.status) {
         const { error: updateError } = await supabase
           .from("festas")
           .update({ status: novoStatus })
@@ -59,12 +76,13 @@ export async function autoUpdateFestaStatus() {
           console.error(`Erro ao atualizar festa ${festa.id}:`, updateError);
         } else {
           updatedCount++;
+          console.log(`✅ Festa ${festa.id}: ${festa.status} → ${novoStatus}`);
         }
       }
     }
 
     if (updatedCount > 0) {
-      console.log(`✅ ${updatedCount} festas atualizadas para status encerrada/encerrada_pendente`);
+      console.log(`✅ Total: ${updatedCount} festas atualizadas`);
     }
 
     return { success: true, updated: updatedCount };
