@@ -193,3 +193,31 @@ export interface DespesaGeral {
   created_at: string;
 }
 
+export interface RankingCliente {
+  cliente_id: string;
+  cliente_nome: string;
+  total_festas: number;
+  posicao: number;
+}
+
+export interface RankingFreelancer {
+  freelancer_id: string;
+  freelancer_nome: string;
+  funcao: FuncaoFreelancer;
+  total_festas: number;
+  posicao: number;
+}
+
+export interface DistribuicaoMensal {
+  mes: number;
+  mes_nome: string;
+  total_festas: number;
+}
+
+export interface MesMaiorDemanda {
+  mes: number;
+  mes_nome: string;
+  total_festas: number;
+  percentual_acima_media: number;
+}
+

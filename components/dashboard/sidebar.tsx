@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Settings,
   X,
+  BarChart3,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -55,6 +56,11 @@ const menuItems = [
     title: "Financeiro",
     href: "/dashboard/financeiro",
     icon: DollarSign,
+  },
+  {
+    title: "Relatórios",
+    href: "/dashboard/relatorios",
+    icon: BarChart3,
   },
   {
     title: "Pagamentos",
