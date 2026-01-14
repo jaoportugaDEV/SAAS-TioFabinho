@@ -12,6 +12,7 @@ import { StepCliente } from "@/components/festas/step-cliente";
 import { StepFreelancers } from "@/components/festas/step-freelancers";
 import { StepOrcamento } from "@/components/festas/step-orcamento";
 import { StepChecklist } from "@/components/festas/step-checklist";
+import { buscarOuCriarCliente } from "@/app/actions/clientes";
 
 const steps = [
   { id: 1, title: "Informações Básicas" },
@@ -117,6 +118,24 @@ export default function NovaFestaPage() {
     setLoading(true);
 
     try {
+      // 0. Buscar ou criar cliente (se não tiver cliente_id, cria um novo)
+      let clienteId = formData.cliente_id;
+      
+      if (!clienteId) {
+        // Cliente novo - criar automaticamente
+        const resultCliente = await buscarOuCriarCliente({
+          nome: formData.cliente_nome,
+          telefone: formData.cliente_contato,
+          observacoes: formData.cliente_observacoes,
+        });
+        
+        if (resultCliente.success) {
+          clienteId = resultCliente.data.id;
+        } else {
+          throw new Error("Erro ao criar cliente: " + resultCliente.error);
+        }
+      }
+
       // 1. Criar a festa
       const { data: festa, error: festaError } = await supabase
         .from("festas")
@@ -127,6 +146,7 @@ export default function NovaFestaPage() {
             horario: formData.horario || null,
             tema: formData.tema,
             local: formData.local,
+            cliente_id: clienteId,
             cliente_nome: formData.cliente_nome,
             cliente_contato: formData.cliente_contato,
             cliente_observacoes: formData.cliente_observacoes,

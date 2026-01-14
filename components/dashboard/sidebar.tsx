@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Calendar,
   Users,
+  UserCircle,
   PartyPopper,
   DollarSign,
   Wallet,
@@ -34,6 +35,11 @@ const menuItems = [
     title: "Festas",
     href: "/dashboard/festas",
     icon: PartyPopper,
+  },
+  {
+    title: "Clientes",
+    href: "/dashboard/clientes",
+    icon: UserCircle,
   },
   {
     title: "Freelancers",

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PartyPopper, Users, DollarSign, Calendar, ArrowRight } from "lucide-react";
+import { PartyPopper, Users, DollarSign, Calendar, ArrowRight, UserCircle } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
 
@@ -13,6 +13,7 @@ export default function DashboardPage() {
   const [stats, setStats] = useState({
     festasDoMes: 0,
     freelancersAtivos: 0,
+    clientesAtivos: 0,
     faturamento: 0,
     proximasFestas: [] as any[],
   });
@@ -44,6 +45,12 @@ export default function DashboardPage() {
       // Freelancers ativos
       const { data: freelancers } = await supabase
         .from("freelancers")
+        .select("id")
+        .eq("ativo", true);
+
+      // Clientes ativos
+      const { data: clientes } = await supabase
+        .from("clientes")
         .select("id")
         .eq("ativo", true);
 
@@ -98,6 +105,7 @@ export default function DashboardPage() {
       setStats({
         festasDoMes: festas?.length || 0,
         freelancersAtivos: freelancers?.length || 0,
+        clientesAtivos: clientes?.length || 0,
         faturamento,
         proximasFestas: proximasFesrasValidas,
       });
@@ -148,6 +156,21 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
             <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
+              Clientes
+            </CardTitle>
+            <UserCircle className="w-4 h-4 text-primary flex-shrink-0" />
+          </CardHeader>
+          <CardContent className="p-3 sm:p-4 pt-0">
+            <div className="text-xl sm:text-2xl font-bold">{stats.clientesAtivos}</div>
+            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
+              {stats.clientesAtivos === 0 ? "Cadastre" : "ativos"}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
               Freelancers
             </CardTitle>
             <Users className="w-4 h-4 text-primary flex-shrink-0" />
@@ -171,21 +194,6 @@ export default function DashboardPage() {
             <div className="text-base sm:text-xl md:text-2xl font-bold truncate">{formatCurrency(stats.faturamento)}</div>
             <p className="text-xs text-gray-500 mt-1 line-clamp-1">
               {stats.faturamento === 0 ? "Aguardando" : "orçamentos"}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4">
-            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 leading-tight">
-              Próximas
-            </CardTitle>
-            <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 pt-0">
-            <div className="text-xl sm:text-2xl font-bold">{stats.proximasFestas.length}</div>
-            <p className="text-xs text-gray-500 mt-1 line-clamp-1">
-              {stats.proximasFestas.length === 0 ? "Nenhuma" : "agendada(s)"}
             </p>
           </CardContent>
         </Card>

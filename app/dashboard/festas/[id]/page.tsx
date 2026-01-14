@@ -43,6 +43,7 @@ export default function DetalheFestaPage() {
   const [orcamento, setOrcamento] = useState<Orcamento | null>(null);
   const [loading, setLoading] = useState(true);
   const [highlightPagamentos, setHighlightPagamentos] = useState(false);
+  const [totalFestasCliente, setTotalFestasCliente] = useState<number>(0);
 
   useEffect(() => {
     // Atualizar status automaticamente antes de carregar os dados
@@ -134,6 +135,18 @@ export default function DetalheFestaPage() {
 
       if (!orcamentoError && orcamentoData) {
         setOrcamento(orcamentoData);
+      }
+
+      // Carregar total de festas do cliente (se tiver cliente_id)
+      if (festaData.cliente_id) {
+        const { count } = await supabase
+          .from("festas")
+          .select("*", { count: "exact", head: true })
+          .eq("cliente_id", festaData.cliente_id);
+        
+        if (count) {
+          setTotalFestasCliente(count);
+        }
       }
 
     } catch (error) {
@@ -306,7 +319,22 @@ export default function DetalheFestaPage() {
                   <User className="w-4 h-4 sm:w-5 sm:h-5 text-primary mt-0.5 flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="text-xs sm:text-sm text-gray-500">Nome</p>
-                    <p className="text-sm sm:text-base font-medium break-words">{festa.cliente_nome}</p>
+                    {festa.cliente_id ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Link href={`/dashboard/clientes/${festa.cliente_id}`}>
+                          <p className="text-sm sm:text-base font-medium break-words text-primary hover:underline">
+                            {festa.cliente_nome}
+                          </p>
+                        </Link>
+                        {totalFestasCliente > 0 && (
+                          <Badge className="bg-blue-100 text-blue-800 text-xs">
+                            {totalFestasCliente} {totalFestasCliente === 1 ? "festa" : "festas"} com o buffet
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm sm:text-base font-medium break-words">{festa.cliente_nome}</p>
+                    )}
                   </div>
                 </div>
 
@@ -325,6 +353,15 @@ export default function DetalheFestaPage() {
                       {festa.cliente_observacoes}
                     </p>
                   </div>
+                )}
+
+                {festa.cliente_id && (
+                  <Link href={`/dashboard/clientes/${festa.cliente_id}`}>
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2">
+                      <User className="w-4 h-4" />
+                      Ver Perfil Completo
+                    </Button>
+                  </Link>
                 )}
               </div>
             </CollapsibleSection>

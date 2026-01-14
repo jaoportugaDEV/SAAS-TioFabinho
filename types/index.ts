@@ -28,6 +28,31 @@ export interface Freelancer {
   created_at: string;
 }
 
+export interface Cliente {
+  id: string;
+  nome: string;
+  email?: string | null;
+  telefone: string;
+  whatsapp?: string | null;
+  cpf_cnpj?: string | null;
+  endereco?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+  data_nascimento?: string | null;
+  observacoes?: string | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClienteComEstatisticas extends Cliente {
+  total_festas: number;
+  valor_total_gasto: number;
+  ultima_festa_data?: string | null;
+  proxima_festa_data?: string | null;
+}
+
 export interface Festa {
   id: string;
   titulo: string;
@@ -36,9 +61,11 @@ export interface Festa {
   duracao_horas?: number; // Duração da festa em horas (padrão: 4.5)
   tema: string;
   local: string;
-  cliente_nome: string;
-  cliente_contato: string;
-  cliente_observacoes?: string;
+  cliente_id?: string | null; // NOVO: Referência ao cliente
+  cliente?: Cliente; // NOVO: Dados do cliente (para joins)
+  cliente_nome: string; // Mantido por compatibilidade
+  cliente_contato: string; // Mantido por compatibilidade
+  cliente_observacoes?: string; // Mantido por compatibilidade
   estimativa_convidados?: number;
   quantidade_criancas?: number;
   faixas_etarias?: string[];
