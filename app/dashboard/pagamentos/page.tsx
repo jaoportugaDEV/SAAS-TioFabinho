@@ -10,6 +10,8 @@ import { DollarSign, Copy, CheckCircle, Clock, Calendar, Users, CalendarDays, Ch
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { getFestasPagamentosPendentes, marcarPagamentoComoRealizado } from "@/app/actions/pagamentos";
 import { checkAndUpdatePagamentosCompletos } from "@/app/actions/auto-update-status";
+import { ValorComBonusDisplay } from "@/components/pagamentos/valor-com-bonus";
+import { EditarBonusDialog } from "@/components/pagamentos/editar-bonus-dialog";
 
 interface FreelancerPagamento {
   id: string;
@@ -23,6 +25,8 @@ interface FreelancerPagamento {
 interface FestaFreelancerPagamento {
   id: string;
   valor_acordado: number;
+  valor_bonus?: number;
+  motivo_bonus?: string | null;
   status_pagamento: string;
   freelancer: FreelancerPagamento;
 }
@@ -60,6 +64,9 @@ interface FreelancerAgrupado {
     festaData: string;
     festaHorario?: string;
     valor: number;
+    valorBase: number;
+    valorBonus?: number;
+    motivoBonus?: string | null;
     status: string;
   }>;
   temPendentes: boolean;
@@ -76,6 +83,16 @@ export default function PagamentosPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("por-festa");
   const [expandedFreelancers, setExpandedFreelancers] = useState<Set<string>>(new Set());
   const festaRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  
+  // Estado para dialog de edição de bônus
+  const [editandoBonus, setEditandoBonus] = useState<{
+    festaId: string;
+    freelancerId: string;
+    freelancerNome: string;
+    valorBase: number;
+    valorBonusAtual: number;
+    motivoBonusAtual?: string | null;
+  } | null>(null);
 
   useEffect(() => {
     loadFestas();
@@ -200,19 +217,26 @@ export default function PagamentosPage() {
 
         const freelancerData = freelancersMap.get(freelancerId)!;
         
+        const valorBase = ff.valor_acordado || 0;
+        const valorBonus = ff.valor_bonus || 0;
+        const valorTotal = valorBase + valorBonus;
+        
         freelancerData.festas.push({
           festaId: festa.id,
           festaTitulo: festa.titulo,
           festaData: festa.data,
           festaHorario: festa.horario,
-          valor: ff.valor_acordado || 0,
+          valor: valorTotal,
+          valorBase: valorBase,
+          valorBonus: valorBonus,
+          motivoBonus: ff.motivo_bonus,
           status: ff.status_pagamento,
         });
 
         if (ff.status_pagamento === "pago") {
-          freelancerData.totalPago += ff.valor_acordado || 0;
+          freelancerData.totalPago += valorTotal;
         } else {
-          freelancerData.totalDevido += ff.valor_acordado || 0;
+          freelancerData.totalDevido += valorTotal;
           freelancerData.temPendentes = true;
         }
       });
@@ -460,9 +484,12 @@ export default function PagamentosPage() {
                                     </div>
                                   </div>
                                   <div className="text-right">
-                                    <p className="font-bold text-primary">
-                                      {formatCurrency(festa.valor)}
-                                    </p>
+                                    <ValorComBonusDisplay
+                                      valorBase={festa.valorBase}
+                                      valorBonus={festa.valorBonus}
+                                      motivoBonus={festa.motivoBonus}
+                                      compact
+                                    />
                                     {festa.status === "pago" && (
                                       <Badge className="bg-green-100 text-green-800 text-xs mt-1">
                                         <CheckCircle className="w-3 h-3 mr-1" />
@@ -490,12 +517,12 @@ export default function PagamentosPage() {
               (ff) => ff.status_pagamento === "pago"
             );
             const totalValor = festa.festa_freelancers.reduce(
-              (acc, ff) => acc + (ff.valor_acordado || 0),
+              (acc, ff) => acc + ((ff.valor_acordado || 0) + (ff.valor_bonus || 0)),
               0
             );
             const totalPago = festa.festa_freelancers
               .filter((ff) => ff.status_pagamento === "pago")
-              .reduce((acc, ff) => acc + (ff.valor_acordado || 0), 0);
+              .reduce((acc, ff) => acc + ((ff.valor_acordado || 0) + (ff.valor_bonus || 0)), 0);
             
             return (
               <Card
@@ -595,9 +622,12 @@ export default function PagamentosPage() {
                                   </p>
                                 </div>
                                 <div className="text-right">
-                                  <p className="text-lg font-bold text-primary">
-                                    {formatCurrency(ff.valor_acordado || 0)}
-                                  </p>
+                                  <ValorComBonusDisplay
+                                    valorBase={ff.valor_acordado}
+                                    valorBonus={ff.valor_bonus}
+                                    motivoBonus={ff.motivo_bonus}
+                                    showDetalhes
+                                  />
                                 </div>
                               </div>
 
@@ -618,6 +648,26 @@ export default function PagamentosPage() {
                                     Copiar
                                   </Button>
                                 </div>
+
+                                {/* Botão Editar Bônus */}
+                                {ff.status_pagamento !== "pago" && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditandoBonus({
+                                      festaId: festa.id,
+                                      freelancerId: ff.freelancer.id,
+                                      freelancerNome: ff.freelancer.nome,
+                                      valorBase: ff.valor_acordado,
+                                      valorBonusAtual: ff.valor_bonus || 0,
+                                      motivoBonusAtual: ff.motivo_bonus,
+                                    })}
+                                    className="w-full gap-2"
+                                  >
+                                    <DollarSign className="w-4 h-4" />
+                                    Editar Valor/Bônus
+                                  </Button>
+                                )}
 
                                 {/* Checkbox de Pagamento */}
                                 <div className="flex items-center gap-3 p-2">
@@ -685,6 +735,21 @@ export default function PagamentosPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog de edição de bônus */}
+      {editandoBonus && (
+        <EditarBonusDialog
+          open={true}
+          onClose={() => setEditandoBonus(null)}
+          festaId={editandoBonus.festaId}
+          freelancerId={editandoBonus.freelancerId}
+          freelancerNome={editandoBonus.freelancerNome}
+          valorBase={editandoBonus.valorBase}
+          valorBonusAtual={editandoBonus.valorBonusAtual}
+          motivoBonusAtual={editandoBonus.motivoBonusAtual}
+          onSuccess={loadFestas}
+        />
+      )}
     </div>
   );
 }

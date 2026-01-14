@@ -105,6 +105,11 @@ export default function DetalheFestaPage() {
           id,
           festa_id,
           freelancer_id,
+          status_confirmacao,
+          valor_acordado,
+          valor_bonus,
+          motivo_bonus,
+          status_pagamento,
           freelancer:freelancers (*)
         `)
         .eq("festa_id", params.id);

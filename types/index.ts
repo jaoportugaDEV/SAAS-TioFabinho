@@ -81,6 +81,8 @@ export interface FestaFreelancer {
   freelancer_id: string;
   status_confirmacao: StatusConfirmacao;
   valor_acordado: number;
+  valor_bonus?: number; // Valor adicional/bônus concedido ao freelancer
+  motivo_bonus?: string | null; // Motivo/descrição opcional do bônus
   status_pagamento: StatusPagamentoIndividual;
   freelancer?: Freelancer;
 }

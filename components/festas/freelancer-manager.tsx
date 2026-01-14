@@ -6,13 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle } from "lucide-react";
+import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle, DollarSign } from "lucide-react";
 import { formatPhone, whatsappLink } from "@/lib/utils";
 import {
   addFreelancerToFesta,
   removeFreelancerFromFesta,
   updateFreelancerConfirmacao,
 } from "@/app/actions/festas";
+import { ValorComBonusDisplay } from "@/components/pagamentos/valor-com-bonus";
+import { EditarBonusDialog } from "@/components/pagamentos/editar-bonus-dialog";
 
 interface FreelancerManagerProps {
   festaId: string;
@@ -50,6 +52,15 @@ export function FreelancerManager({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filtroFuncao, setFiltroFuncao] = useState<string>("todos");
+  
+  // Estado para dialog de edição de bônus
+  const [editandoBonus, setEditandoBonus] = useState<{
+    freelancerId: string;
+    freelancerNome: string;
+    valorBase: number;
+    valorBonusAtual: number;
+    motivoBonusAtual?: string | null;
+  } | null>(null);
 
   // Verifica se o freelancer está disponível na data da festa
   const isAvailable = (freelancer: Freelancer): boolean => {
@@ -124,6 +135,21 @@ export function FreelancerManager({
       ));
       alert("Erro ao atualizar status. Tente novamente.");
     }
+  };
+
+  const handleAbrirEditarBonus = (festaFreelancer: FestaFreelancer & { freelancer: Freelancer }) => {
+    setEditandoBonus({
+      freelancerId: festaFreelancer.freelancer_id,
+      freelancerNome: festaFreelancer.freelancer.nome,
+      valorBase: festaFreelancer.valor_acordado,
+      valorBonusAtual: festaFreelancer.valor_bonus || 0,
+      motivoBonusAtual: festaFreelancer.motivo_bonus,
+    });
+  };
+
+  const handleSucessoBonus = () => {
+    // Recarregar a página para atualizar os dados
+    window.location.reload();
   };
 
 
@@ -346,10 +372,30 @@ export function FreelancerManager({
                           )}
                         </Badge>
                       </div>
+                      
+                      {/* Valor com bônus */}
+                      <div className="mt-3 pt-2 border-t">
+                        <ValorComBonusDisplay
+                          valorBase={festaFreelancer.valor_acordado}
+                          valorBonus={festaFreelancer.valor_bonus}
+                          motivoBonus={festaFreelancer.motivo_bonus}
+                          compact
+                        />
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleAbrirEditarBonus(festaFreelancer)}
+                      className="text-xs sm:text-sm gap-1"
+                      title="Editar valor e bônus"
+                    >
+                      <DollarSign className="w-4 h-4" />
+                      <span className="hidden sm:inline">Editar Valor</span>
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -376,6 +422,21 @@ export function FreelancerManager({
           </div>
         )}
       </CardContent>
+
+      {/* Dialog de edição de bônus */}
+      {editandoBonus && (
+        <EditarBonusDialog
+          open={true}
+          onClose={() => setEditandoBonus(null)}
+          festaId={festaId}
+          freelancerId={editandoBonus.freelancerId}
+          freelancerNome={editandoBonus.freelancerNome}
+          valorBase={editandoBonus.valorBase}
+          valorBonusAtual={editandoBonus.valorBonusAtual}
+          motivoBonusAtual={editandoBonus.motivoBonusAtual}
+          onSuccess={handleSucessoBonus}
+        />
+      )}
     </Card>
   );
 }

@@ -36,10 +36,10 @@ export async function marcarPagamentoComoRealizado(
 ) {
   const supabase = await createClient();
 
-  // Buscar o valor acordado do freelancer
+  // Buscar o valor acordado + bônus do freelancer
   const { data: festaFreelancer, error: fetchError } = await supabase
     .from("festa_freelancers")
-    .select("valor_acordado")
+    .select("valor_acordado, valor_bonus, motivo_bonus")
     .eq("festa_id", festaId)
     .eq("freelancer_id", freelancerId)
     .single();
@@ -49,16 +49,29 @@ export async function marcarPagamentoComoRealizado(
     return { success: false, error: fetchError?.message || "Freelancer não encontrado" };
   }
 
+  const valorBase = festaFreelancer.valor_acordado || 0;
+  const valorBonus = festaFreelancer.valor_bonus || 0;
+  const valorTotal = valorBase + valorBonus;
+
   if (pago) {
+    // Preparar observações
+    let observacoes = "Pagamento registrado via sistema";
+    if (valorBonus > 0) {
+      observacoes = `Pagamento registrado via sistema (Base: R$ ${valorBase.toFixed(2)} + Bônus: R$ ${valorBonus.toFixed(2)})`;
+      if (festaFreelancer.motivo_bonus) {
+        observacoes += ` - Motivo do bônus: ${festaFreelancer.motivo_bonus}`;
+      }
+    }
+
     // Marcar como pago: criar registro na tabela pagamentos_freelancers
     const { error: pagamentoError } = await supabase
       .from("pagamentos_freelancers")
       .insert({
         festa_id: festaId,
         freelancer_id: freelancerId,
-        valor: festaFreelancer.valor_acordado || 0,
+        valor: valorTotal,
         data_pagamento: new Date().toISOString().split('T')[0], // Data de hoje
-        observacoes: "Pagamento registrado via sistema"
+        observacoes
       });
 
     if (pagamentoError) {
@@ -173,6 +186,8 @@ export async function getFestasPagamentosPendentes() {
       festa_freelancers (
         id,
         valor_acordado,
+        valor_bonus,
+        motivo_bonus,
         status_pagamento,
         freelancer:freelancers (
           id,
@@ -220,5 +235,39 @@ export async function getCountPagamentosPendentes() {
   }
 
   return { success: true, count: result.data.length };
+}
+
+// Atualizar bônus de um freelancer em uma festa específica
+export async function updateBonusFreelancerFesta(
+  festaId: string,
+  freelancerId: string,
+  valorBonus: number,
+  motivoBonus?: string | null
+) {
+  const supabase = await createClient();
+
+  // Validação
+  if (valorBonus < 0) {
+    return { success: false, error: "O valor do bônus não pode ser negativo" };
+  }
+
+  const { error } = await supabase
+    .from("festa_freelancers")
+    .update({ 
+      valor_bonus: valorBonus,
+      motivo_bonus: motivoBonus 
+    })
+    .eq("festa_id", festaId)
+    .eq("freelancer_id", freelancerId);
+
+  if (error) {
+    console.error("Erro ao atualizar bônus:", error);
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath(`/dashboard/festas/${festaId}`);
+  revalidatePath("/dashboard/pagamentos");
+  revalidatePath("/dashboard/financeiro");
+  return { success: true };
 }
 
