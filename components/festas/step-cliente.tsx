@@ -178,6 +178,45 @@ export function StepCliente({ formData, setFormData, errors = {} }: StepClienteP
             )}
           </div>
 
+          {/* Identificadores Únicos */}
+          <Card className="p-4 bg-blue-50 border-blue-200">
+            <h4 className="font-semibold text-sm mb-3 text-blue-900">
+              Identificadores Únicos (Informe pelo menos um)
+            </h4>
+            
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="cliente_email">E-mail do Cliente</Label>
+                <Input
+                  id="cliente_email"
+                  type="email"
+                  value={formData.cliente_email || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cliente_email: e.target.value })
+                  }
+                  placeholder="exemplo@email.com"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cliente_cpf_cnpj">CPF/CNPJ do Cliente</Label>
+                <Input
+                  id="cliente_cpf_cnpj"
+                  value={formData.cliente_cpf_cnpj || ""}
+                  onChange={(e) =>
+                    setFormData({ ...formData, cliente_cpf_cnpj: e.target.value })
+                  }
+                  placeholder="Digite apenas números (CPF: 11 | CNPJ: 14)"
+                  maxLength={18}
+                />
+              </div>
+              
+              <p className="text-xs text-blue-700">
+                ℹ️ Informe pelo menos Email OU CPF/CNPJ para identificar o cliente de forma única
+              </p>
+            </div>
+          </Card>
+
           <div className="space-y-2">
             <Label htmlFor="cliente_observacoes">Observações</Label>
             <Textarea

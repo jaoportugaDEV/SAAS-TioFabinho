@@ -7,9 +7,10 @@ import { Cliente } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Edit, MessageCircle, Plus, Calendar, DollarSign, TrendingUp, PartyPopper, MapPin } from "lucide-react";
+import { ArrowLeft, Edit, MessageCircle, Plus, Calendar, DollarSign, TrendingUp, PartyPopper, MapPin, FileText, Mail, AlertTriangle } from "lucide-react";
 import { getClienteById, deleteCliente } from "@/app/actions/clientes";
 import { formatPhone, whatsappLink, formatCurrency, formatDate } from "@/lib/utils";
+import { formatarCpfCnpj, getTipoIdentificador } from "@/lib/validators";
 
 export default function DetalheClientePage() {
   const params = useParams();
@@ -131,12 +132,73 @@ export default function DetalheClientePage() {
         </div>
       </div>
 
+      {/* Alerta se não tiver identificadores */}
+      {!cliente.cpf_cnpj && !cliente.email && (
+        <Card className="bg-yellow-50 border-yellow-300 border-2">
+          <CardContent className="py-4 px-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-900 mb-1">
+                  ⚠️ Cliente sem identificadores únicos
+                </h3>
+                <p className="text-sm text-yellow-800 mb-3">
+                  Este cliente não possui Email nem CPF/CNPJ cadastrados. 
+                  Recomendamos adicionar pelo menos um deles para evitar confusão com outros clientes de mesmo nome.
+                </p>
+                <Link href={`/dashboard/clientes/${params.id}/editar`}>
+                  <Button size="sm" variant="outline" className="border-yellow-600 text-yellow-900 hover:bg-yellow-100">
+                    <Edit className="w-4 h-4 mr-2" />
+                    Adicionar Identificadores
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Informações Pessoais */}
       <Card>
         <CardHeader>
           <CardTitle>Informações Pessoais</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {/* Identificadores Únicos (destaque) */}
+          {(cliente.cpf_cnpj || cliente.email) && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg space-y-3 mb-4">
+              <h4 className="font-semibold text-sm text-blue-900">Identificadores Únicos</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {cliente.cpf_cnpj && (
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                    <div>
+                      <p className="text-xs text-gray-500">CPF/CNPJ</p>
+                      <p className="font-mono font-medium text-gray-900">
+                        {formatarCpfCnpj(cliente.cpf_cnpj)}
+                      </p>
+                      <Badge variant="outline" className="text-xs mt-1 bg-blue-50 text-blue-700 border-blue-200">
+                        {getTipoIdentificador(cliente.cpf_cnpj)}
+                      </Badge>
+                    </div>
+                  </div>
+                )}
+                
+                {cliente.email && (
+                  <div className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-green-600" />
+                    <div>
+                      <p className="text-xs text-gray-500">E-mail</p>
+                      <p className="font-medium text-gray-900 break-all">
+                        {cliente.email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p className="text-sm text-gray-500">Telefone</p>

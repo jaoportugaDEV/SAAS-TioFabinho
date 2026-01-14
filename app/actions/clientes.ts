@@ -2,6 +2,13 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { 
+  validarIdentificadores, 
+  limparCpfCnpj, 
+  normalizarEmail,
+  validarCpfCnpj,
+  validarEmail
+} from "@/lib/validators";
 
 // Listar todos os clientes com estatísticas
 export async function getClientes() {
@@ -100,14 +107,66 @@ export async function getClienteById(id: string) {
 export async function createCliente(data: any) {
   const supabase = await createClient();
   
+  // Validar identificadores (pelo menos Email OU CPF/CNPJ)
+  const validacao = validarIdentificadores({
+    email: data.email,
+    cpf_cnpj: data.cpf_cnpj,
+  });
+  
+  if (!validacao.valido) {
+    return { success: false, error: validacao.erro };
+  }
+
+  // Processar e validar Email
+  let emailNormalizado = null;
+  if (data.email && data.email.trim()) {
+    emailNormalizado = normalizarEmail(data.email);
+    
+    // Verificar duplicação de Email
+    const { data: existenteEmail } = await supabase
+      .from('clientes')
+      .select('id, nome')
+      .eq('email', emailNormalizado)
+      .single();
+
+    if (existenteEmail) {
+      return {
+        success: false,
+        error: `Email já cadastrado para: ${existenteEmail.nome}`
+      };
+    }
+  }
+
+  // Processar e validar CPF/CNPJ
+  let cpfCnpjLimpo = null;
+  if (data.cpf_cnpj && data.cpf_cnpj.trim()) {
+    cpfCnpjLimpo = limparCpfCnpj(data.cpf_cnpj);
+    
+    // Verificar duplicação de CPF/CNPJ
+    const { data: existenteCpf } = await supabase
+      .from('clientes')
+      .select('id, nome')
+      .eq('cpf_cnpj', cpfCnpjLimpo)
+      .single();
+
+    if (existenteCpf) {
+      const validacaoCpf = validarCpfCnpj(cpfCnpjLimpo);
+      const tipo = validacaoCpf.tipo || 'CPF/CNPJ';
+      return {
+        success: false,
+        error: `${tipo} já cadastrado para: ${existenteCpf.nome}`
+      };
+    }
+  }
+  
   const { data: cliente, error } = await supabase
     .from("clientes")
     .insert([{
       nome: data.nome,
-      email: data.email || null,
+      email: emailNormalizado,
       telefone: data.telefone,
       whatsapp: data.whatsapp || null,
-      cpf_cnpj: data.cpf_cnpj || null,
+      cpf_cnpj: cpfCnpjLimpo,
       endereco: data.endereco || null,
       cidade: data.cidade || null,
       estado: data.estado || null,
@@ -128,14 +187,67 @@ export async function createCliente(data: any) {
 export async function updateCliente(id: string, data: any) {
   const supabase = await createClient();
   
+  // Processar e validar Email se fornecido
+  let emailNormalizado = null;
+  if (data.email && data.email.trim()) {
+    const validacaoEmail = validarEmail(data.email);
+    if (!validacaoEmail.valido) {
+      return { success: false, error: validacaoEmail.erro };
+    }
+    
+    emailNormalizado = normalizarEmail(data.email);
+    
+    // Verificar se já existe outro cliente com este Email
+    const { data: existenteEmail } = await supabase
+      .from('clientes')
+      .select('id, nome')
+      .eq('email', emailNormalizado)
+      .neq('id', id)
+      .single();
+
+    if (existenteEmail) {
+      return {
+        success: false,
+        error: `Email já cadastrado para: ${existenteEmail.nome}`
+      };
+    }
+  }
+
+  // Processar e validar CPF/CNPJ se fornecido
+  let cpfCnpjLimpo = null;
+  if (data.cpf_cnpj && data.cpf_cnpj.trim()) {
+    const validacaoCpf = validarCpfCnpj(data.cpf_cnpj);
+    if (!validacaoCpf.valido) {
+      return { success: false, error: validacaoCpf.erro || 'CPF/CNPJ inválido' };
+    }
+    
+    cpfCnpjLimpo = limparCpfCnpj(data.cpf_cnpj);
+    
+    // Verificar se já existe outro cliente com este CPF/CNPJ
+    const { data: existenteCpf } = await supabase
+      .from('clientes')
+      .select('id, nome')
+      .eq('cpf_cnpj', cpfCnpjLimpo)
+      .neq('id', id)
+      .single();
+
+    if (existenteCpf) {
+      const tipo = validacaoCpf.tipo || 'CPF/CNPJ';
+      return {
+        success: false,
+        error: `${tipo} já cadastrado para: ${existenteCpf.nome}`
+      };
+    }
+  }
+  
   const { error } = await supabase
     .from("clientes")
     .update({
       nome: data.nome,
-      email: data.email || null,
+      email: emailNormalizado,
       telefone: data.telefone,
       whatsapp: data.whatsapp || null,
-      cpf_cnpj: data.cpf_cnpj || null,
+      cpf_cnpj: cpfCnpjLimpo,
       endereco: data.endereco || null,
       cidade: data.cidade || null,
       estado: data.estado || null,
@@ -205,7 +317,7 @@ export async function searchClientes(query: string) {
     // Se não há query, retornar os 10 clientes mais recentes
     const { data, error } = await supabase
       .from("clientes")
-      .select("id, nome, telefone")
+      .select("id, nome, telefone, email, cpf_cnpj")
       .eq("ativo", true)
       .order("created_at", { ascending: false })
       .limit(10);
@@ -214,11 +326,26 @@ export async function searchClientes(query: string) {
     return { success: true, data };
   }
   
+  // Preparar busca por CPF/CNPJ (se parece com números)
+  const cpfCnpjLimpo = limparCpfCnpj(query);
+  
+  let orConditions = [`nome.ilike.%${query}%`, `telefone.ilike.%${query}%`];
+  
+  // Se tem números suficientes, adicionar busca por CPF/CNPJ
+  if (cpfCnpjLimpo.length >= 3) {
+    orConditions.push(`cpf_cnpj.ilike.%${cpfCnpjLimpo}%`);
+  }
+  
+  // Adicionar busca por email
+  if (query.includes('@')) {
+    orConditions.push(`email.ilike.%${query}%`);
+  }
+  
   const { data, error } = await supabase
     .from("clientes")
-    .select("id, nome, telefone")
+    .select("id, nome, telefone, email, cpf_cnpj")
     .eq("ativo", true)
-    .or(`nome.ilike.%${query}%,telefone.ilike.%${query}%`)
+    .or(orConditions.join(','))
     .order("nome")
     .limit(10);
   
@@ -228,28 +355,105 @@ export async function searchClientes(query: string) {
 }
 
 // Buscar ou criar cliente (usado no wizard de festa)
-export async function buscarOuCriarCliente(data: { nome: string; telefone: string; observacoes?: string }) {
+export async function buscarOuCriarCliente(data: { 
+  nome: string; 
+  telefone: string; 
+  email?: string;
+  cpf_cnpj?: string;
+  observacoes?: string;
+}) {
   const supabase = await createClient();
   
-  // Primeiro tenta buscar cliente pelo telefone
-  const { data: clienteExistente } = await supabase
-    .from("clientes")
-    .select("*")
-    .eq("telefone", data.telefone)
+  // 1. Buscar por CPF/CNPJ (prioridade 1)
+  if (data.cpf_cnpj && data.cpf_cnpj.trim()) {
+    const cpfCnpjLimpo = limparCpfCnpj(data.cpf_cnpj);
+    
+    if (cpfCnpjLimpo) {
+      const { data: clientePorCpf } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('cpf_cnpj', cpfCnpjLimpo)
+        .single();
+
+      if (clientePorCpf) {
+        return { success: true, data: clientePorCpf, criado: false };
+      }
+    }
+  }
+
+  // 2. Buscar por Email (prioridade 2)
+  if (data.email && data.email.trim()) {
+    const emailNormalizado = normalizarEmail(data.email);
+    
+    const { data: clientePorEmail } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('email', emailNormalizado)
+      .single();
+
+    if (clientePorEmail) {
+      return { success: true, data: clientePorEmail, criado: false };
+    }
+  }
+
+  // 3. Buscar por telefone (fallback para clientes antigos)
+  const { data: clientePorTelefone } = await supabase
+    .from('clientes')
+    .select('*')
+    .eq('telefone', data.telefone)
     .single();
-  
-  if (clienteExistente) {
-    return { success: true, data: clienteExistente, criado: false };
+
+  if (clientePorTelefone) {
+    // Atualizar identificadores se fornecidos e ainda não existem
+    const updates: any = {};
+    
+    if (!clientePorTelefone.email && data.email) {
+      updates.email = normalizarEmail(data.email);
+    }
+    
+    if (!clientePorTelefone.cpf_cnpj && data.cpf_cnpj) {
+      updates.cpf_cnpj = limparCpfCnpj(data.cpf_cnpj);
+    }
+    
+    if (Object.keys(updates).length > 0) {
+      updates.updated_at = new Date().toISOString();
+      await supabase
+        .from('clientes')
+        .update(updates)
+        .eq('id', clientePorTelefone.id);
+      
+      // Retornar cliente atualizado
+      const { data: clienteAtualizado } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('id', clientePorTelefone.id)
+        .single();
+      
+      return { success: true, data: clienteAtualizado || clientePorTelefone, criado: false };
+    }
+    
+    return { success: true, data: clientePorTelefone, criado: false };
   }
   
-  // Se não existe, cria novo cliente
+  // 4. Criar novo cliente
+  // Preparar dados
+  const dadosCliente: any = {
+    nome: data.nome,
+    telefone: data.telefone,
+    observacoes: data.observacoes || null,
+  };
+  
+  if (data.email && data.email.trim()) {
+    dadosCliente.email = normalizarEmail(data.email);
+  }
+  
+  if (data.cpf_cnpj && data.cpf_cnpj.trim()) {
+    dadosCliente.cpf_cnpj = limparCpfCnpj(data.cpf_cnpj);
+  }
+  
   const { data: novoCliente, error } = await supabase
     .from("clientes")
-    .insert([{
-      nome: data.nome,
-      telefone: data.telefone,
-      observacoes: data.observacoes || null,
-    }])
+    .insert([dadosCliente])
     .select()
     .single();
   

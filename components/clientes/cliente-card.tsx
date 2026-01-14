@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { MessageCircle, Eye, Calendar, DollarSign } from "lucide-react";
+import { MessageCircle, Eye, Calendar, DollarSign, FileText, Mail, AlertTriangle } from "lucide-react";
 import { formatPhone, whatsappLink, formatCurrency, formatDate } from "@/lib/utils";
+import { formatarCpfCnpj, getTipoIdentificador } from "@/lib/validators";
 
 interface ClienteCardProps {
   cliente: ClienteComEstatisticas;
@@ -59,14 +60,40 @@ export function ClienteCard({ cliente }: ClienteCardProps) {
             </div>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-xs sm:text-sm text-gray-600">
-              📞 {formatPhone(cliente.telefone)}
-            </p>
+          <div className="space-y-2">
+            {/* Identificadores Únicos */}
+            {cliente.cpf_cnpj && (
+              <div className="flex items-center gap-2">
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-sm font-mono text-gray-700">
+                  {formatarCpfCnpj(cliente.cpf_cnpj)}
+                </span>
+                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                  {getTipoIdentificador(cliente.cpf_cnpj)}
+                </Badge>
+              </div>
+            )}
+            
             {cliente.email && (
-              <p className="text-xs sm:text-sm text-gray-600 truncate">
-                ✉️ {cliente.email}
-              </p>
+              <div className="flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-green-600" />
+                <span className="text-xs sm:text-sm text-gray-700 truncate">{cliente.email}</span>
+              </div>
+            )}
+            
+            {/* Telefone */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs sm:text-sm text-gray-600">
+                📞 {formatPhone(cliente.telefone)}
+              </span>
+            </div>
+            
+            {/* Alerta se não tiver identificadores */}
+            {!cliente.cpf_cnpj && !cliente.email && (
+              <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300 text-xs flex items-center gap-1 w-fit">
+                <AlertTriangle className="w-3 h-3" />
+                Sem identificadores únicos
+              </Badge>
             )}
           </div>
         </div>

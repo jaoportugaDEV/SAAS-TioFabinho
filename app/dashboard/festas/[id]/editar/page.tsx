@@ -193,6 +193,8 @@ export default function EditarFestaPage() {
         const resultCliente = await buscarOuCriarCliente({
           nome: formData.cliente_nome,
           telefone: formData.cliente_contato,
+          email: formData.cliente_email,
+          cpf_cnpj: formData.cliente_cpf_cnpj,
           observacoes: formData.cliente_observacoes,
         });
         
