@@ -14,6 +14,10 @@ export type StatusPagamentoIndividual = 'pendente' | 'pago';
 
 export type StatusConfirmacao = 'pendente' | 'confirmado';
 
+export type CategoriaDespesa = 'mercado_cozinha' | 'material_festa' | 'aluguel_contas' | 'outros';
+
+export type MetodoPagamentoDespesa = 'cartao_empresa' | 'pix' | 'debito' | 'dinheiro';
+
 export interface Freelancer {
   id: string;
   nome: string;
@@ -181,7 +185,10 @@ export interface DespesaGeral {
   descricao: string;
   valor: number;
   data: string;
-  categoria?: string;
+  categoria: CategoriaDespesa;
+  metodo_pagamento: MetodoPagamentoDespesa;
+  nota_fiscal?: string;
+  fornecedor?: string;
   observacoes?: string;
   created_at: string;
 }

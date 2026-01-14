@@ -1,6 +1,6 @@
 import jsPDF from "jspdf";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { DespesaGeral } from "@/types";
+import { DespesaGeral, MetodoPagamentoDespesa, CategoriaDespesa } from "@/types";
 
 // Cor principal da empresa (vermelho)
 const PRIMARY_COLOR = "#FF0000";
@@ -406,6 +406,271 @@ export async function gerarPDFFreelancers(
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
   const fileName = `Relatorio_Freelancers_${meses[mes - 1]}_${ano}.pdf`;
+  doc.save(fileName);
+}
+
+// PDF Fiscal (completo para contadora)
+export async function gerarPDFFiscal(
+  mes: number,
+  ano: number,
+  despesas: DespesaGeral[],
+  despesasPorMetodo: Record<MetodoPagamentoDespesa, number>,
+  despesasPorCategoria: Record<CategoriaDespesa, number>
+) {
+  const doc = new jsPDF();
+  
+  addHeader(doc, "Relatório Fiscal - Controle de Despesas");
+  
+  let yPosition = 45;
+  yPosition = addPeriodInfo(doc, mes, ano, yPosition);
+  
+  const margin = 20;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  
+  const metodoPagamentoLabels: Record<MetodoPagamentoDespesa, string> = {
+    cartao_empresa: "Cartão da Empresa",
+    pix: "PIX",
+    debito: "Débito",
+    dinheiro: "Dinheiro",
+  };
+  
+  const categoriaLabels: Record<CategoriaDespesa, string> = {
+    mercado_cozinha: "Mercado/Cozinha",
+    material_festa: "Material para Festas",
+    aluguel_contas: "Aluguel e Contas Fixas",
+    outros: "Outros",
+  };
+  
+  // SEÇÃO 1: RESUMO FISCAL
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.text("1. RESUMO FISCAL", margin, yPosition);
+  yPosition += 10;
+  
+  // Total Geral
+  const totalGeral = despesas.reduce((acc, d) => acc + Number(d.valor), 0);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(0, 0, 0);
+  doc.text("Total Geral de Despesas:", margin, yPosition);
+  doc.setFont("helvetica", "bold");
+  doc.text(formatCurrency(totalGeral), pageWidth - margin, yPosition, { align: "right" });
+  yPosition += 10;
+  
+  // Destaque: Total Cartão Empresa
+  doc.setFillColor(255, 240, 240);
+  doc.rect(margin - 5, yPosition - 6, pageWidth - 2 * margin + 10, 18, "F");
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.text("⭐ TOTAL CARTÃO DA EMPRESA", margin, yPosition);
+  yPosition += 5;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text("   (para Nota Fiscal)", margin, yPosition);
+  yPosition += 6;
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.text(formatCurrency(despesasPorMetodo.cartao_empresa), pageWidth - margin, yPosition, { align: "right" });
+  yPosition += 12;
+  
+  // Tabela: Total por Método de Pagamento
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(80, 80, 80);
+  doc.text("Despesas por Método de Pagamento:", margin, yPosition);
+  yPosition += 8;
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(0, 0, 0);
+  
+  for (const [metodo, valor] of Object.entries(despesasPorMetodo)) {
+    doc.text(`• ${metodoPagamentoLabels[metodo as MetodoPagamentoDespesa]}`, margin + 5, yPosition);
+    doc.text(formatCurrency(valor), pageWidth - margin, yPosition, { align: "right" });
+    yPosition += 6;
+  }
+  
+  yPosition += 10;
+  
+  // SEÇÃO 2: DESPESAS POR CATEGORIA
+  if (yPosition > pageHeight - 100) {
+    doc.addPage();
+    yPosition = 20;
+  }
+  
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.text("2. DESPESAS POR CATEGORIA", margin, yPosition);
+  yPosition += 10;
+  
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(0, 0, 0);
+  
+  for (const [categoria, valor] of Object.entries(despesasPorCategoria)) {
+    const percentual = totalGeral > 0 ? ((valor / totalGeral) * 100).toFixed(1) : "0.0";
+    doc.text(`• ${categoriaLabels[categoria as CategoriaDespesa]}`, margin + 5, yPosition);
+    doc.text(`${formatCurrency(valor)} (${percentual}%)`, pageWidth - margin, yPosition, { align: "right" });
+    yPosition += 6;
+  }
+  
+  yPosition += 10;
+  
+  // SEÇÃO 3: DETALHAMENTO COMPLETO
+  doc.addPage();
+  yPosition = 20;
+  
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.text("3. DETALHAMENTO COMPLETO DAS DESPESAS", margin, yPosition);
+  yPosition += 10;
+  
+  // Agrupar despesas por método de pagamento
+  const despesasPorMetodoArray: Record<MetodoPagamentoDespesa, DespesaGeral[]> = {
+    cartao_empresa: [],
+    pix: [],
+    debito: [],
+    dinheiro: [],
+  };
+  
+  for (const despesa of despesas) {
+    despesasPorMetodoArray[despesa.metodo_pagamento].push(despesa);
+  }
+  
+  // Mostrar Cartão da Empresa primeiro (mais importante para nota fiscal)
+  for (const metodo of ["cartao_empresa", "pix", "debito", "dinheiro"] as MetodoPagamentoDespesa[]) {
+    const despesasMetodo = despesasPorMetodoArray[metodo];
+    
+    if (despesasMetodo.length === 0) continue;
+    
+    if (yPosition > pageHeight - 50) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    
+    // Título do método
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+    const destaque = metodo === "cartao_empresa" ? " ⭐" : "";
+    doc.text(`${metodoPagamentoLabels[metodo]}${destaque}`, margin, yPosition);
+    yPosition += 8;
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    
+    let subtotal = 0;
+    
+    // Listar despesas
+    for (const despesa of despesasMetodo) {
+      if (yPosition > pageHeight - 25) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      
+      // Data e descrição
+      const dataFormatada = formatDate(despesa.data);
+      doc.text(dataFormatada, margin + 5, yPosition);
+      
+      // Categoria
+      doc.setTextColor(80, 80, 80);
+      doc.text(`[${categoriaLabels[despesa.categoria]}]`, margin + 30, yPosition);
+      
+      // Descrição
+      doc.setTextColor(0, 0, 0);
+      const descricaoMaxLen = 50;
+      const descricao = despesa.descricao.length > descricaoMaxLen 
+        ? despesa.descricao.substring(0, descricaoMaxLen) + "..."
+        : despesa.descricao;
+      doc.text(descricao, margin + 70, yPosition);
+      
+      // Valor
+      doc.setFont("helvetica", "bold");
+      doc.text(formatCurrency(despesa.valor), pageWidth - margin, yPosition, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      yPosition += 4;
+      
+      // Fornecedor (se houver)
+      if (despesa.fornecedor) {
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`  Fornecedor: ${despesa.fornecedor}`, margin + 10, yPosition);
+        doc.setFontSize(9);
+        doc.setTextColor(0, 0, 0);
+        yPosition += 4;
+      }
+      
+      yPosition += 2;
+      subtotal += Number(despesa.valor);
+    }
+    
+    // Subtotal do método
+    yPosition += 3;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+    doc.text(`Subtotal ${metodoPagamentoLabels[metodo]}:`, margin + 10, yPosition);
+    doc.text(formatCurrency(subtotal), pageWidth - margin, yPosition, { align: "right" });
+    yPosition += 10;
+    
+    // Linha separadora
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.3);
+    doc.line(margin, yPosition, pageWidth - margin, yPosition);
+    yPosition += 8;
+  }
+  
+  // TOTAL FINAL
+  if (yPosition > pageHeight - 30) {
+    doc.addPage();
+    yPosition = 20;
+  }
+  
+  yPosition += 5;
+  doc.setDrawColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.setLineWidth(0.8);
+  doc.line(margin, yPosition, pageWidth - margin, yPosition);
+  yPosition += 10;
+  
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.text("TOTAL GERAL DE DESPESAS:", margin, yPosition);
+  doc.text(formatCurrency(totalGeral), pageWidth - margin, yPosition, { align: "right" });
+  yPosition += 8;
+  
+  // Reforçar o valor do cartão da empresa
+  doc.setFillColor(255, 240, 240);
+  doc.rect(margin - 5, yPosition - 6, pageWidth - 2 * margin + 10, 18, "F");
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("⭐ TOTAL CARTÃO DA EMPRESA", margin, yPosition);
+  yPosition += 5;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100, 100, 100);
+  doc.text("   (para Nota Fiscal)", margin, yPosition);
+  yPosition += 6;
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  doc.text(formatCurrency(despesasPorMetodo.cartao_empresa), pageWidth - margin, yPosition, { align: "right" });
+  
+  addFooter(doc);
+  
+  const meses = [
+    "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+  const fileName = `Relatorio_Fiscal_${meses[mes - 1]}_${ano}.pdf`;
   doc.save(fileName);
 }
 

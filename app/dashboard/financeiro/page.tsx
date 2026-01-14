@@ -5,12 +5,12 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { DollarSign, TrendingUp, TrendingDown, Download, FileText, Plus, Trash2 } from "lucide-react";
+import { DollarSign, TrendingUp, TrendingDown, Download, FileText, Plus, Trash2, CreditCard } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
-import { listarDespesasGerais, excluirDespesaGeral } from "@/app/actions/despesas";
+import { listarDespesasGerais, excluirDespesaGeral, getDespesasPorMetodo, getDespesasPorCategoria } from "@/app/actions/despesas";
 import { AdicionarDespesaDialog } from "@/components/financeiro/adicionar-despesa-dialog";
-import { gerarPDFDespesas, gerarPDFFestas, gerarPDFFreelancers } from "@/lib/pdf-generator";
-import { DespesaGeral } from "@/types";
+import { gerarPDFDespesas, gerarPDFFestas, gerarPDFFreelancers, gerarPDFFiscal } from "@/lib/pdf-generator";
+import { DespesaGeral, MetodoPagamentoDespesa, CategoriaDespesa } from "@/types";
 
 const funcaoLabels: Record<string, string> = {
   monitor: "Monitor",
@@ -18,6 +18,20 @@ const funcaoLabels: Record<string, string> = {
   fotografo: "Fotógrafo",
   garcom: "Garçom",
   recepcao: "Recepção",
+  outros: "Outros",
+};
+
+const metodoPagamentoLabels: Record<MetodoPagamentoDespesa, string> = {
+  cartao_empresa: "Cartão da Empresa",
+  pix: "PIX",
+  debito: "Débito",
+  dinheiro: "Dinheiro",
+};
+
+const categoriaLabels: Record<CategoriaDespesa, string> = {
+  mercado_cozinha: "Mercado/Cozinha",
+  material_festa: "Material Festas",
+  aluguel_contas: "Aluguel/Contas",
   outros: "Outros",
 };
 
@@ -30,6 +44,18 @@ export default function FinanceiroPage() {
     festasDoMes: 0,
   });
   const [despesasGerais, setDespesasGerais] = useState<DespesaGeral[]>([]);
+  const [despesasPorMetodo, setDespesasPorMetodo] = useState<Record<MetodoPagamentoDespesa, number>>({
+    cartao_empresa: 0,
+    pix: 0,
+    debito: 0,
+    dinheiro: 0,
+  });
+  const [despesasPorCategoria, setDespesasPorCategoria] = useState<Record<CategoriaDespesa, number>>({
+    mercado_cozinha: 0,
+    material_festa: 0,
+    aluguel_contas: 0,
+    outros: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [gerandoPDF, setGerandoPDF] = useState(false);
@@ -37,6 +63,10 @@ export default function FinanceiroPage() {
   // Filtro de mês/ano
   const [mesAtual, setMesAtual] = useState(new Date().getMonth() + 1);
   const [anoAtual, setAnoAtual] = useState(new Date().getFullYear());
+  
+  // Filtros de despesas
+  const [filtroCategoria, setFiltroCategoria] = useState<CategoriaDespesa | "todas">("todas");
+  const [filtroMetodo, setFiltroMetodo] = useState<MetodoPagamentoDespesa | "todos">("todos");
   
   const supabase = createClient();
 
@@ -93,6 +123,28 @@ export default function FinanceiroPage() {
       const despesas = resultDespesas.success ? resultDespesas.data : [];
       setDespesasGerais(despesas);
       const totalDespesasGerais = despesas.reduce((acc, d) => acc + Number(d.valor), 0);
+
+      // Carregar despesas por método de pagamento
+      const resultMetodo = await getDespesasPorMetodo(String(mesAtual), String(anoAtual));
+      if (resultMetodo.success) {
+        setDespesasPorMetodo({
+          cartao_empresa: resultMetodo.data.cartao_empresa || 0,
+          pix: resultMetodo.data.pix || 0,
+          debito: resultMetodo.data.debito || 0,
+          dinheiro: resultMetodo.data.dinheiro || 0,
+        });
+      }
+
+      // Carregar despesas por categoria
+      const resultCategoria = await getDespesasPorCategoria(String(mesAtual), String(anoAtual));
+      if (resultCategoria.success) {
+        setDespesasPorCategoria({
+          mercado_cozinha: resultCategoria.data.mercado_cozinha || 0,
+          material_festa: resultCategoria.data.material_festa || 0,
+          aluguel_contas: resultCategoria.data.aluguel_contas || 0,
+          outros: resultCategoria.data.outros || 0,
+        });
+      }
 
       const totalDespesas = totalDespesasFreelancers + totalDespesasGerais;
 
@@ -254,6 +306,24 @@ export default function FinanceiroPage() {
     }
   };
 
+  const handleGerarPDFFiscal = async () => {
+    setGerandoPDF(true);
+    try {
+      await gerarPDFFiscal(
+        mesAtual, 
+        anoAtual, 
+        despesasGerais,
+        despesasPorMetodo,
+        despesasPorCategoria
+      );
+    } catch (error) {
+      console.error("Erro ao gerar PDF fiscal:", error);
+      alert("Erro ao gerar PDF fiscal. Tente novamente.");
+    } finally {
+      setGerandoPDF(false);
+    }
+  };
+
   const meses = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -382,6 +452,111 @@ export default function FinanceiroPage() {
         </Card>
       </div>
 
+      {/* Controle Fiscal */}
+      <Card className="bg-gradient-to-br from-blue-50 to-white border-blue-200">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center gap-2 text-primary text-base sm:text-lg">
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+            Controle Fiscal do Mês
+          </CardTitle>
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
+            Controle de despesas para emissão de nota fiscal
+          </p>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+          {/* Total Cartão Empresa - Destaque */}
+          <div className="bg-primary/10 border-2 border-primary rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-primary" />
+                <span className="text-sm font-medium text-gray-700">Total Cartão da Empresa</span>
+              </div>
+              <span className="text-2xl font-bold text-primary">
+                {formatCurrency(despesasPorMetodo.cartao_empresa)}
+              </span>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">
+              ⭐ Valor para emissão de nota fiscal
+            </p>
+          </div>
+
+          {/* Breakdown por Método de Pagamento */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Por Método de Pagamento</h4>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-600">Cartão Empresa</p>
+                <p className="text-lg font-bold text-primary mt-1">
+                  {formatCurrency(despesasPorMetodo.cartao_empresa)}
+                </p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-600">PIX</p>
+                <p className="text-lg font-bold text-gray-900 mt-1">
+                  {formatCurrency(despesasPorMetodo.pix)}
+                </p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-600">Débito</p>
+                <p className="text-lg font-bold text-gray-900 mt-1">
+                  {formatCurrency(despesasPorMetodo.debito)}
+                </p>
+              </div>
+              <div className="bg-white border border-gray-200 rounded-lg p-3">
+                <p className="text-xs text-gray-600">Dinheiro</p>
+                <p className="text-lg font-bold text-gray-900 mt-1">
+                  {formatCurrency(despesasPorMetodo.dinheiro)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Breakdown por Categoria */}
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700 mb-3">Por Categoria</h4>
+            <div className="space-y-2">
+              {Object.entries(despesasPorCategoria).map(([categoria, valor]) => {
+                const total = Object.values(despesasPorCategoria).reduce((acc, v) => acc + v, 0);
+                const percentual = total > 0 ? (valor / total) * 100 : 0;
+                return (
+                  <div key={categoria} className="bg-white border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-gray-700">
+                        {categoriaLabels[categoria as CategoriaDespesa]}
+                      </span>
+                      <span className="text-sm font-bold text-gray-900">
+                        {formatCurrency(valor)}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all"
+                        style={{ width: `${percentual}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Botão Relatório Fiscal */}
+          <Button
+            onClick={handleGerarPDFFiscal}
+            disabled={gerandoPDF || despesasGerais.length === 0}
+            className="w-full h-12 bg-primary hover:bg-primary/90 text-white font-semibold"
+          >
+            <Download className="w-5 h-5 mr-2" />
+            Gerar Relatório Fiscal Completo (PDF)
+          </Button>
+          {despesasGerais.length === 0 && (
+            <p className="text-xs text-center text-gray-500">
+              Adicione despesas para gerar o relatório fiscal
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Botões de Download de PDFs */}
       <Card className="bg-gradient-to-br from-red-50 to-white border-red-200">
         <CardHeader className="p-4 sm:p-6">
@@ -438,6 +613,34 @@ export default function FinanceiroPage() {
           </Button>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">
+          {/* Filtros */}
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <select
+              value={filtroCategoria}
+              onChange={(e) => setFiltroCategoria(e.target.value as CategoriaDespesa | "todas")}
+              className="flex-1 text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="todas">Todas as categorias</option>
+              {Object.entries(categoriaLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={filtroMetodo}
+              onChange={(e) => setFiltroMetodo(e.target.value as MetodoPagamentoDespesa | "todos")}
+              className="flex-1 text-xs sm:text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="todos">Todos os métodos</option>
+              {Object.entries(metodoPagamentoLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {despesasGerais.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>Nenhuma despesa geral cadastrada neste mês</p>
@@ -445,21 +648,51 @@ export default function FinanceiroPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {despesasGerais.map((despesa) => (
+              {despesasGerais
+                .filter((despesa) => {
+                  if (filtroCategoria !== "todas" && despesa.categoria !== filtroCategoria) {
+                    return false;
+                  }
+                  if (filtroMetodo !== "todos" && despesa.metodo_pagamento !== filtroMetodo) {
+                    return false;
+                  }
+                  return true;
+                })
+                .map((despesa) => (
                 <div
                   key={despesa.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm sm:text-base text-gray-900 break-words">{despesa.descricao}</p>
-                    <p className="text-xs sm:text-sm text-gray-500">
-                      {new Date(despesa.data + "T00:00:00").toLocaleDateString("pt-BR")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm sm:text-base text-gray-900 break-words">
+                        {despesa.descricao}
+                      </p>
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        {new Date(despesa.data + "T00:00:00").toLocaleDateString("pt-BR")}
+                        {despesa.fornecedor && ` • ${despesa.fornecedor}`}
+                      </p>
+                    </div>
                     <span className="font-bold text-base sm:text-lg text-red-600 whitespace-nowrap">
                       {formatCurrency(despesa.valor)}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                        {categoriaLabels[despesa.categoria]}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium ${
+                          despesa.metodo_pagamento === "cartao_empresa"
+                            ? "bg-primary/20 text-primary ring-1 ring-primary"
+                            : "bg-gray-200 text-gray-700"
+                        }`}
+                      >
+                        {metodoPagamentoLabels[despesa.metodo_pagamento]}
+                        {despesa.metodo_pagamento === "cartao_empresa" && " ⭐"}
+                      </span>
+                    </div>
                     <Button
                       variant="outline"
                       size="sm"

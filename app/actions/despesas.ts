@@ -2,14 +2,17 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { DespesaGeral } from "@/types";
+import { DespesaGeral, CategoriaDespesa, MetodoPagamentoDespesa } from "@/types";
 
 // Criar nova despesa geral
 export async function criarDespesaGeral(
   descricao: string,
   valor: number,
   data: string,
-  categoria?: string,
+  categoria: CategoriaDespesa,
+  metodo_pagamento: MetodoPagamentoDespesa,
+  fornecedor?: string,
+  nota_fiscal?: string,
   observacoes?: string
 ) {
   const supabase = await createClient();
@@ -21,6 +24,9 @@ export async function criarDespesaGeral(
       valor,
       data,
       categoria,
+      metodo_pagamento,
+      fornecedor,
+      nota_fiscal,
       observacoes,
     })
     .select()
@@ -69,7 +75,10 @@ export async function atualizarDespesaGeral(
   descricao: string,
   valor: number,
   data: string,
-  categoria?: string,
+  categoria: CategoriaDespesa,
+  metodo_pagamento: MetodoPagamentoDespesa,
+  fornecedor?: string,
+  nota_fiscal?: string,
   observacoes?: string
 ) {
   const supabase = await createClient();
@@ -81,6 +90,9 @@ export async function atualizarDespesaGeral(
       valor,
       data,
       categoria,
+      metodo_pagamento,
+      fornecedor,
+      nota_fiscal,
       observacoes,
     })
     .eq("id", id)
@@ -124,5 +136,45 @@ export async function getTotalDespesasGeraisMes(mes: string, ano: string) {
 
   const total = result.data.reduce((acc, despesa) => acc + Number(despesa.valor), 0);
   return { success: true, total };
+}
+
+// Obter despesas por método de pagamento
+export async function getDespesasPorMetodo(mes: string, ano: string) {
+  const result = await listarDespesasGerais(mes, ano);
+  
+  if (!result.success) {
+    return { success: false, data: {} };
+  }
+
+  const totaisPorMetodo = result.data.reduce((acc, despesa) => {
+    const metodo = despesa.metodo_pagamento;
+    if (!acc[metodo]) {
+      acc[metodo] = 0;
+    }
+    acc[metodo] += Number(despesa.valor);
+    return acc;
+  }, {} as Record<MetodoPagamentoDespesa, number>);
+
+  return { success: true, data: totaisPorMetodo };
+}
+
+// Obter despesas por categoria
+export async function getDespesasPorCategoria(mes: string, ano: string) {
+  const result = await listarDespesasGerais(mes, ano);
+  
+  if (!result.success) {
+    return { success: false, data: {} };
+  }
+
+  const totaisPorCategoria = result.data.reduce((acc, despesa) => {
+    const categoria = despesa.categoria;
+    if (!acc[categoria]) {
+      acc[categoria] = 0;
+    }
+    acc[categoria] += Number(despesa.valor);
+    return acc;
+  }, {} as Record<CategoriaDespesa, number>);
+
+  return { success: true, data: totaisPorCategoria };
 }
 
