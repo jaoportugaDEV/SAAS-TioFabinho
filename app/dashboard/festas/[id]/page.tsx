@@ -15,7 +15,6 @@ import { StatusSelector } from "@/components/festas/status-selector";
 import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
 import { ChecklistManager } from "@/components/festas/checklist-manager";
 import { FreelancerManager } from "@/components/festas/freelancer-manager";
-import { GaleriaFotos } from "@/components/festas/galeria-fotos";
 import { ContratoGenerator } from "@/components/festas/contrato-generator";
 import { DeleteFestaDialog } from "@/components/festas/delete-festa-dialog";
 import { PagamentoManager } from "@/components/festas/pagamento-manager";
@@ -396,9 +395,6 @@ export default function DetalheFestaPage() {
 
       {/* Checklist */}
       <ChecklistManager festaId={festa.id} items={checklist} />
-
-      {/* Galeria de Fotos */}
-      <GaleriaFotos festaId={festa.id} />
 
       {/* Gerador de Contrato */}
       <ContratoGenerator festa={festa} orcamento={orcamento} />

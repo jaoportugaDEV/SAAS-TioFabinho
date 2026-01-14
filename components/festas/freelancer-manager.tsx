@@ -78,17 +78,43 @@ export function FreelancerManager({
   };
 
   const handleAddFreelancer = async (freelancerId: string) => {
+    // Encontrar o freelancer que será adicionado
+    const freelancerToAdd = availableFreelancers.find(f => f.id === freelancerId);
+    if (!freelancerToAdd) return;
+
+    // Update otimista: adiciona imediatamente na UI
+    const novoFestaFreelancer = {
+      id: `temp-${Date.now()}`, // ID temporário
+      festa_id: festaId,
+      freelancer_id: freelancerId,
+      valor_acordado: freelancerToAdd.valor_padrao,
+      valor_bonus: 0,
+      motivo_bonus: null,
+      status_confirmacao: "pendente" as const,
+      status_pagamento: "pendente" as const,
+      freelancer: freelancerToAdd,
+    };
+
+    setFestaFreelancers([...festaFreelancers, novoFestaFreelancer]);
+    setAvailableFreelancers(availableFreelancers.filter(f => f.id !== freelancerId));
+    setShowAddDialog(false); // Fechar o dialog
+
+    // Fazer a chamada real à API em background
     setLoading(true);
     const result = await addFreelancerToFesta(festaId, freelancerId);
-
-    if (result.success) {
-      // Recarrega a página para atualizar os dados
-      window.location.reload();
-    } else {
-      alert("Erro ao adicionar freelancer. Tente novamente.");
-    }
-
     setLoading(false);
+
+    if (!result.success) {
+      // Se falhar, reverter as mudanças
+      alert("Erro ao adicionar freelancer. Tente novamente.");
+      setFestaFreelancers(festaFreelancers.filter(f => f.freelancer_id !== freelancerId));
+      setAvailableFreelancers([...availableFreelancers, freelancerToAdd]);
+    } else if (result.data) {
+      // Atualizar com os dados reais do servidor (incluindo ID real)
+      setFestaFreelancers(prev => 
+        prev.map(f => f.id === novoFestaFreelancer.id ? result.data : f)
+      );
+    }
   };
 
   const handleRemoveFreelancer = async (freelancerId: string) => {
@@ -147,9 +173,16 @@ export function FreelancerManager({
     });
   };
 
-  const handleSucessoBonus = () => {
-    // Recarregar a página para atualizar os dados
-    window.location.reload();
+  const handleSucessoBonus = (freelancerId: string, novoValorBonus: number, novoMotivoBonus?: string | null) => {
+    // Atualizar o estado local imediatamente
+    setFestaFreelancers(prev =>
+      prev.map(f =>
+        f.freelancer_id === freelancerId
+          ? { ...f, valor_bonus: novoValorBonus, motivo_bonus: novoMotivoBonus }
+          : f
+      )
+    );
+    setEditandoBonus(null);
   };
 
 
@@ -200,7 +233,6 @@ export function FreelancerManager({
                   <option value="todos">Todos</option>
                   <option value="monitor">Monitor</option>
                   <option value="cozinheira">Cozinheira</option>
-                  <option value="fotografo">Fotógrafo</option>
                   <option value="garcom">Garçom</option>
                   <option value="recepcao">Recepção</option>
                   <option value="outros">Outros</option>
@@ -434,7 +466,9 @@ export function FreelancerManager({
           valorBase={editandoBonus.valorBase}
           valorBonusAtual={editandoBonus.valorBonusAtual}
           motivoBonusAtual={editandoBonus.motivoBonusAtual}
-          onSuccess={handleSucessoBonus}
+          onSuccess={(freelancerId, novoValorBonus, novoMotivoBonus) => 
+            handleSucessoBonus(freelancerId, novoValorBonus, novoMotivoBonus)
+          }
         />
       )}
     </Card>

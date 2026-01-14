@@ -19,7 +19,7 @@ interface EditarBonusDialogProps {
   valorBase: number;
   valorBonusAtual: number;
   motivoBonusAtual?: string | null;
-  onSuccess: () => void;
+  onSuccess: (freelancerId: string, novoValorBonus: number, novoMotivoBonus?: string | null) => void;
 }
 
 export function EditarBonusDialog({
@@ -71,7 +71,7 @@ export function EditarBonusDialog({
       );
 
       if (result.success) {
-        onSuccess();
+        onSuccess(freelancerId, valorBonusNumber, motivoBonus.trim() || null);
         onClose();
       } else {
         setError(result.error || "Erro ao salvar bônus");

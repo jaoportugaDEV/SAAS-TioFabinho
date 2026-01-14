@@ -6,9 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { DollarSign, Copy, CheckCircle, Clock, Calendar, Users, CalendarDays, ChevronDown, ChevronUp } from "lucide-react";
+import { DollarSign, Copy, CheckCircle, Clock, Calendar, Users, CalendarDays, ChevronDown, ChevronUp, UserX } from "lucide-react";
 import { formatDate, formatCurrency } from "@/lib/utils";
-import { getFestasPagamentosPendentes, marcarPagamentoComoRealizado } from "@/app/actions/pagamentos";
+import { getFestasPagamentosPendentes, marcarPagamentoComoRealizado, removerFreelancerDaFesta } from "@/app/actions/pagamentos";
 import { checkAndUpdatePagamentosCompletos } from "@/app/actions/auto-update-status";
 import { ValorComBonusDisplay } from "@/components/pagamentos/valor-com-bonus";
 import { EditarBonusDialog } from "@/components/pagamentos/editar-bonus-dialog";
@@ -142,26 +142,80 @@ export default function PagamentosPage() {
   };
 
   const togglePagamento = async (festaId: string, freelancerId: string, statusAtual: string) => {
-    setProcessando(freelancerId);
     const novoPago = statusAtual !== "pago";
+    const novoStatus = novoPago ? "pago" : "pendente";
     
+    // Update otimista: atualizar UI imediatamente
+    setFestas(prev => prev.map(festa => {
+      if (festa.id !== festaId) return festa;
+      
+      const festaNova = {
+        ...festa,
+        festa_freelancers: festa.festa_freelancers.map(ff =>
+          ff.freelancer.id === freelancerId
+            ? { ...ff, status_pagamento: novoStatus }
+            : ff
+        ),
+      };
+      
+      // Recalcular status geral da festa
+      const todosPagos = festaNova.festa_freelancers.every(ff => ff.status_pagamento === "pago");
+      const algumPago = festaNova.festa_freelancers.some(ff => ff.status_pagamento === "pago");
+      
+      let statusGeral: string;
+      if (todosPagos) statusGeral = "pago";
+      else if (algumPago) statusGeral = "parcial";
+      else statusGeral = "pendente";
+      
+      festaNova.status_pagamento_freelancers = statusGeral;
+      
+      return festaNova;
+    }));
+    
+    // Fazer a chamada real à API em background
+    setProcessando(freelancerId);
     const result = await marcarPagamentoComoRealizado(festaId, freelancerId, novoPago);
-    
-    if (result.success) {
-      // Recarregar festas para atualizar status
-      await loadFestas();
-    } else {
-      alert("Erro ao atualizar pagamento. Tente novamente.");
-    }
-    
     setProcessando(null);
+    
+    if (!result.success) {
+      // Se falhar, reverter as mudanças
+      alert("Erro ao atualizar pagamento. Revertendo...");
+      await loadFestas();
+    }
   };
 
   const marcarTodosPagamentosFreelancer = async (freelancerId: string, pagamentos: Array<{festaId: string, status: string}>) => {
-    setProcessando(freelancerId);
-    
     // Marcar todos os pagamentos pendentes deste freelancer
     const pagamentosPendentes = pagamentos.filter(p => p.status !== "pago");
+    
+    if (pagamentosPendentes.length === 0) {
+      alert("Todos os pagamentos já estão marcados como pagos!");
+      return;
+    }
+    
+    // Update otimista: atualizar UI imediatamente
+    setFestas(prev => prev.map(festa => {
+      const freelancerNaFesta = festa.festa_freelancers.find(ff => ff.freelancer.id === freelancerId);
+      if (!freelancerNaFesta || freelancerNaFesta.status_pagamento === "pago") return festa;
+      
+      const festaNova = {
+        ...festa,
+        festa_freelancers: festa.festa_freelancers.map(ff =>
+          ff.freelancer.id === freelancerId
+            ? { ...ff, status_pagamento: "pago" }
+            : ff
+        ),
+      };
+      
+      // Recalcular status geral
+      const todosPagos = festaNova.festa_freelancers.every(ff => ff.status_pagamento === "pago");
+      festaNova.status_pagamento_freelancers = todosPagos ? "pago" : "parcial";
+      
+      return festaNova;
+    }));
+    
+    // Fazer as chamadas reais à API em background
+    setProcessando(freelancerId);
     
     try {
       for (const pagamento of pagamentosPendentes) {
@@ -171,14 +225,59 @@ export default function PagamentosPage() {
         }
       }
       
-      // Recarregar festas para atualizar status
-      await loadFestas();
-      alert("Todos os pagamentos foram marcados como realizados!");
+      alert("✅ Todos os pagamentos foram marcados como realizados!");
     } catch (error) {
-      alert("Erro ao atualizar pagamentos. Tente novamente.");
+      alert("Erro ao atualizar pagamentos. Revertendo...");
+      await loadFestas();
     }
     
     setProcessando(null);
+  };
+
+  const removerFreelancer = async (festaId: string, freelancerId: string, freelancerNome: string) => {
+    const confirmar = confirm(
+      `Tem certeza que deseja remover ${freelancerNome} desta festa?\n\n` +
+      `Isso removerá:\n` +
+      `• O freelancer da lista de pagamentos\n` +
+      `• O registro de pagamento (se existir)\n` +
+      `• O freelancer não aparecerá mais nos relatórios desta festa\n\n` +
+      `Use isso apenas se o freelancer cancelou a participação.`
+    );
+
+    if (!confirmar) return;
+
+    // Update otimista: remover da UI imediatamente
+    setFestas(prev => prev.map(festa => {
+      if (festa.id !== festaId) return festa;
+      
+      const festaNova = {
+        ...festa,
+        festa_freelancers: festa.festa_freelancers.filter(ff => ff.freelancer.id !== freelancerId),
+      };
+      
+      // Recalcular status geral
+      if (festaNova.festa_freelancers.length === 0) {
+        festaNova.status_pagamento_freelancers = "pago";
+      } else {
+        const todosPagos = festaNova.festa_freelancers.every(ff => ff.status_pagamento === "pago");
+        const algumPago = festaNova.festa_freelancers.some(ff => ff.status_pagamento === "pago");
+        festaNova.status_pagamento_freelancers = todosPagos ? "pago" : algumPago ? "parcial" : "pendente";
+      }
+      
+      return festaNova;
+    }).filter(festa => festa.festa_freelancers.length > 0)); // Remove festa se não tiver mais freelancers
+    
+    // Fazer a chamada real à API em background
+    setProcessando(freelancerId);
+    const result = await removerFreelancerDaFesta(festaId, freelancerId);
+    setProcessando(null);
+    
+    if (result.success) {
+      alert(`✅ ${freelancerNome} foi removido com sucesso!`);
+    } else {
+      alert("Erro ao remover freelancer. Revertendo...");
+      await loadFestas();
+    }
   };
 
   const toggleExpandFreelancer = (freelancerId: string) => {
@@ -649,24 +748,37 @@ export default function PagamentosPage() {
                                   </Button>
                                 </div>
 
-                                {/* Botão Editar Bônus */}
+                                {/* Botões de Ação */}
                                 {ff.status_pagamento !== "pago" && (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setEditandoBonus({
-                                      festaId: festa.id,
-                                      freelancerId: ff.freelancer.id,
-                                      freelancerNome: ff.freelancer.nome,
-                                      valorBase: ff.valor_acordado,
-                                      valorBonusAtual: ff.valor_bonus || 0,
-                                      motivoBonusAtual: ff.motivo_bonus,
-                                    })}
-                                    className="w-full gap-2"
-                                  >
-                                    <DollarSign className="w-4 h-4" />
-                                    Editar Valor/Bônus
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setEditandoBonus({
+                                        festaId: festa.id,
+                                        freelancerId: ff.freelancer.id,
+                                        freelancerNome: ff.freelancer.nome,
+                                        valorBase: ff.valor_acordado,
+                                        valorBonusAtual: ff.valor_bonus || 0,
+                                        motivoBonusAtual: ff.motivo_bonus,
+                                      })}
+                                      className="flex-1 gap-2"
+                                    >
+                                      <DollarSign className="w-4 h-4" />
+                                      Editar Valor/Bônus
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => removerFreelancer(festa.id, ff.freelancer.id, ff.freelancer.nome)}
+                                      disabled={processando === ff.freelancer.id}
+                                      className="gap-2 text-red-600 hover:bg-red-50 border-red-200"
+                                      title="Remover freelancer (cancelou participação)"
+                                    >
+                                      <UserX className="w-4 h-4" />
+                                      Remover
+                                    </Button>
+                                  </div>
                                 )}
 
                                 {/* Checkbox de Pagamento */}
@@ -747,7 +859,20 @@ export default function PagamentosPage() {
           valorBase={editandoBonus.valorBase}
           valorBonusAtual={editandoBonus.valorBonusAtual}
           motivoBonusAtual={editandoBonus.motivoBonusAtual}
-          onSuccess={loadFestas}
+          onSuccess={(freelancerId, novoValorBonus, novoMotivoBonus) => {
+            // Atualizar estado local instantaneamente
+            setFestas(prev =>
+              prev.map(festa => ({
+                ...festa,
+                festa_freelancers: festa.festa_freelancers.map(ff =>
+                  ff.freelancer.id === freelancerId
+                    ? { ...ff, valor_bonus: novoValorBonus, motivo_bonus: novoMotivoBonus }
+                    : ff
+                ),
+              }))
+            );
+            setEditandoBonus(null);
+          }}
         />
       )}
     </div>

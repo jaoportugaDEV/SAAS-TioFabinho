@@ -19,7 +19,7 @@ export function ValorComBonusDisplay({
   showDetalhes = false,
   compact = false,
 }: ValorComBonusProps) {
-  const temBonus = valorBonus && valorBonus > 0;
+  const temBonus = (valorBonus || 0) > 0;
   const valorTotal = valorBase + (valorBonus || 0);
 
   // Modo compacto - apenas o total com ícone se tiver bônus

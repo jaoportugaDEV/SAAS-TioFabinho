@@ -271,3 +271,45 @@ export async function updateBonusFreelancerFesta(
   return { success: true };
 }
 
+// Remover freelancer do pagamento (quando ele cancela a participação)
+export async function removerFreelancerDaFesta(
+  festaId: string,
+  freelancerId: string
+) {
+  const supabase = await createClient();
+
+  // 1. Remover registro de pagamento (se existir)
+  const { error: pagamentoError } = await supabase
+    .from("pagamentos_freelancers")
+    .delete()
+    .eq("festa_id", festaId)
+    .eq("freelancer_id", freelancerId);
+
+  if (pagamentoError) {
+    console.error("Erro ao remover pagamento:", pagamentoError);
+    // Não retorna erro, pois pode não existir pagamento ainda
+  }
+
+  // 2. Remover freelancer da festa
+  const { error: festaFreelancerError } = await supabase
+    .from("festa_freelancers")
+    .delete()
+    .eq("festa_id", festaId)
+    .eq("freelancer_id", freelancerId);
+
+  if (festaFreelancerError) {
+    console.error("Erro ao remover freelancer da festa:", festaFreelancerError);
+    return { success: false, error: festaFreelancerError.message };
+  }
+
+  // 3. Recalcular status de pagamento da festa
+  await atualizarStatusPagamentoFesta(festaId);
+
+  revalidatePath(`/dashboard/festas/${festaId}`);
+  revalidatePath("/dashboard/festas");
+  revalidatePath("/dashboard/pagamentos");
+  revalidatePath("/dashboard/financeiro");
+  revalidatePath("/dashboard/relatorios");
+  return { success: true };
+}
+

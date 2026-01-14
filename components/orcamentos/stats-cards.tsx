@@ -39,7 +39,7 @@ export function StatsCards({
       title: "Total Pago",
       value: formatCurrency(totalPago),
       icon: CheckCircle,
-      description: "Pagamentos completos",
+      description: "Inclui parcelas pagas",
       bgColor: "bg-green-50",
       iconColor: "text-green-600",
       borderColor: "border-green-200",

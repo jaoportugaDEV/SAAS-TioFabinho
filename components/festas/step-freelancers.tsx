@@ -115,7 +115,6 @@ export function StepFreelancers({ formData, setFormData }: StepFreelancersProps)
           <option value="todos">Todos</option>
           <option value="monitor">Monitor</option>
           <option value="cozinheira">Cozinheira</option>
-          <option value="fotografo">Fotógrafo</option>
           <option value="garcom">Garçom</option>
           <option value="recepcao">Recepção</option>
           <option value="outros">Outros</option>

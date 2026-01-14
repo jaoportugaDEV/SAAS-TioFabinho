@@ -159,6 +159,7 @@ export default function ConfiguracoesPage() {
                       min="0"
                       value={valor.valor}
                       onChange={(e) => handleValorChange(valor.funcao, parseFloat(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
                       className="pl-12 text-lg font-semibold"
                       placeholder="0,00"
                     />
