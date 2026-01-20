@@ -91,6 +91,7 @@ export default function NovaFestaPage() {
       if (currentStep < steps.length) {
         setCurrentStep(currentStep + 1);
         setErrors({}); // Limpar erros ao avançar
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Voltar ao topo
       }
     }
   };
@@ -99,6 +100,7 @@ export default function NovaFestaPage() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
       setErrors({}); // Limpar erros ao voltar
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Voltar ao topo
     }
   };
 

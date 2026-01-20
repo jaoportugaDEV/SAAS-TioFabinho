@@ -697,8 +697,8 @@ export default function PagamentosPage() {
                               : "bg-white border-gray-200"
                           }`}
                         >
-                          <div className="flex items-start gap-4">
-                            <Avatar className="w-12 h-12">
+                          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+                            <Avatar className="w-12 h-12 sm:w-12 sm:h-12 flex-shrink-0">
                               {ff.freelancer.foto_url ? (
                                 <AvatarImage
                                   src={ff.freelancer.foto_url}
@@ -712,15 +712,15 @@ export default function PagamentosPage() {
                               )}
                             </Avatar>
 
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-start justify-between gap-4 mb-2">
-                                <div>
-                                  <p className="font-semibold">{ff.freelancer.nome}</p>
-                                  <p className="text-sm text-gray-600">
+                            <div className="flex-1 min-w-0 w-full">
+                              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4 mb-2 sm:mb-2">
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-sm sm:text-base truncate">{ff.freelancer.nome}</p>
+                                  <p className="text-xs sm:text-sm text-gray-600">
                                     {funcaoLabels[ff.freelancer.funcao] || ff.freelancer.funcao}
                                   </p>
                                 </div>
-                                <div className="text-right">
+                                <div className="text-left sm:text-right flex-shrink-0">
                                   <ValorComBonusDisplay
                                     valorBase={ff.valor_acordado}
                                     valorBonus={ff.valor_bonus}
@@ -750,7 +750,7 @@ export default function PagamentosPage() {
 
                                 {/* Botões de Ação */}
                                 {ff.status_pagamento !== "pago" && (
-                                  <div className="flex gap-2">
+                                  <div className="flex flex-col sm:flex-row gap-2">
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -762,21 +762,21 @@ export default function PagamentosPage() {
                                         valorBonusAtual: ff.valor_bonus || 0,
                                         motivoBonusAtual: ff.motivo_bonus,
                                       })}
-                                      className="flex-1 gap-2"
+                                      className="w-full sm:flex-1 gap-2"
                                     >
                                       <DollarSign className="w-4 h-4" />
-                                      Editar Valor/Bônus
+                                      <span className="text-xs sm:text-sm">Editar Valor/Bônus</span>
                                     </Button>
                                     <Button
                                       size="sm"
                                       variant="outline"
                                       onClick={() => removerFreelancer(festa.id, ff.freelancer.id, ff.freelancer.nome)}
                                       disabled={processando === ff.freelancer.id}
-                                      className="gap-2 text-red-600 hover:bg-red-50 border-red-200"
+                                      className="w-full sm:w-auto gap-2 text-red-600 hover:bg-red-50 hover:text-red-700 border-red-200"
                                       title="Remover freelancer (cancelou participação)"
                                     >
                                       <UserX className="w-4 h-4" />
-                                      Remover
+                                      <span className="text-xs sm:text-sm">Remover Freelancer</span>
                                     </Button>
                                   </div>
                                 )}

@@ -165,6 +165,7 @@ export default function EditarFestaPage() {
       if (currentStep < steps.length) {
         setCurrentStep(currentStep + 1);
         setErrors({});
+        window.scrollTo({ top: 0, behavior: 'smooth' }); // Voltar ao topo
       }
     }
   };
@@ -173,6 +174,7 @@ export default function EditarFestaPage() {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
       setErrors({});
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // Voltar ao topo
     }
   };
 

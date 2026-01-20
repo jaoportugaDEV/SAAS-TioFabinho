@@ -135,7 +135,10 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
       motivo_bonus: bonusFixo > 0 ? "Bonificação fixa do freelancer" : null,
       status_pagamento: 'pendente',
     })
-    .select()
+    .select(`
+      *,
+      freelancer:freelancers(*)
+    `)
     .single();
 
   if (error) {
@@ -205,5 +208,51 @@ export async function deleteFesta(festaId: string) {
 
   revalidatePath("/dashboard/festas");
   return { success: true };
+}
+
+// Sincronizar bonus_fixo de um freelancer em todas as festas pendentes
+export async function sincronizarBonusFixoFreelancer(freelancerId: string) {
+  const supabase = await createClient();
+
+  // 1. Buscar o bonus_fixo atual do freelancer
+  const { data: freelancer, error: freelancerError } = await supabase
+    .from("freelancers")
+    .select("bonus_fixo, nome")
+    .eq("id", freelancerId)
+    .single();
+
+  if (freelancerError || !freelancer) {
+    console.error("Erro ao buscar freelancer:", freelancerError);
+    return { success: false, error: "Freelancer não encontrado" };
+  }
+
+  const bonusFixo = freelancer.bonus_fixo || 0;
+
+  // 2. Atualizar todas as festas pendentes desse freelancer
+  const { error: updateError } = await supabase
+    .from("festa_freelancers")
+    .update({
+      valor_bonus: bonusFixo,
+      motivo_bonus: bonusFixo > 0 ? "Bonificação fixa do freelancer" : null,
+    })
+    .eq("freelancer_id", freelancerId)
+    .eq("status_pagamento", "pendente");
+
+  if (updateError) {
+    console.error("Erro ao sincronizar bônus:", updateError);
+    return { success: false, error: updateError.message };
+  }
+
+  // 3. Revalidar páginas relevantes
+  revalidatePath("/dashboard/pagamentos");
+  revalidatePath("/dashboard/festas");
+  revalidatePath("/dashboard/financeiro");
+
+  return { 
+    success: true, 
+    message: bonusFixo > 0 
+      ? `Bônus de R$ ${bonusFixo.toFixed(2)} aplicado em todos os pagamentos pendentes de ${freelancer.nome}` 
+      : `Bônus removido de todos os pagamentos pendentes de ${freelancer.nome}`
+  };
 }
 
