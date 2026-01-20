@@ -20,6 +20,7 @@ import { DeleteFestaDialog } from "@/components/festas/delete-festa-dialog";
 import { PagamentoManager } from "@/components/festas/pagamento-manager";
 import { Pencil } from "lucide-react";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
+import { AlertaPagamentosPendentes } from "@/components/festas/alerta-pagamentos-pendentes";
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   planejamento: { label: "Planejamento", color: "bg-blue-100 text-blue-800" },
@@ -175,6 +176,21 @@ export default function DetalheFestaPage() {
 
   const statusInfo = statusLabels[festa.status] || statusLabels.planejamento;
 
+  // Calcular dados do alerta de pagamentos pendentes
+  const freelancersPendentes = festaFreelancers
+    .filter(ff => ff.status_pagamento !== "pago")
+    .map(ff => ({
+      id: ff.freelancer.id,
+      nome: ff.freelancer.nome,
+      valor: (ff.valor_acordado || 0) + (ff.valor_bonus || 0)
+    }));
+
+  const totalPendente = freelancersPendentes.reduce((sum, f) => sum + f.valor, 0);
+  
+  // Só mostrar alerta se a festa já começou (acontecendo, encerrada_pendente ou encerrada)
+  const festaJaComecou = ["acontecendo", "encerrada_pendente", "encerrada"].includes(festa.status);
+  const temPagamentosPendentes = freelancersPendentes.length > 0 && festaJaComecou;
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -216,6 +232,15 @@ export default function DetalheFestaPage() {
           </div>
         </div>
       </div>
+
+      {/* Alerta de Pagamentos Pendentes */}
+      {temPagamentosPendentes && (
+        <AlertaPagamentosPendentes
+          festaId={festa.id}
+          freelancersPendentes={freelancersPendentes}
+          totalPendente={totalPendente}
+        />
+      )}
 
       {/* Informações Principais */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -295,8 +320,8 @@ export default function DetalheFestaPage() {
                         <div className="flex flex-wrap gap-2">
                           {festa.faixas_etarias.map((faixa) => (
                             <Badge key={faixa} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                              {faixa === "0-5" && "0-5 anos"}
-                              {faixa === "6-12" && "6-12 anos"}
+                              {faixa === "0-4" && "0-4 anos"}
+                              {faixa === "5-12" && "5-12 anos"}
                               {faixa === "13-17" && "13-17 anos"}
                               {faixa === "18+" && "18+"}
                             </Badge>

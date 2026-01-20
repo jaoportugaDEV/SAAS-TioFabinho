@@ -11,8 +11,8 @@ interface StepInfoBasicaProps {
 }
 
 const faixasEtariasOpcoes = [
-  { value: "0-5", label: "0-5 anos" },
-  { value: "6-12", label: "6-12 anos" },
+  { value: "0-4", label: "0-4 anos" },
+  { value: "5-12", label: "5-12 anos" },
   { value: "13-17", label: "13-17 anos" },
   { value: "18+", label: "18+" },
 ];

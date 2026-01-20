@@ -82,14 +82,17 @@ export function FreelancerManager({
     const freelancerToAdd = availableFreelancers.find(f => f.id === freelancerId);
     if (!freelancerToAdd) return;
 
+    // Aplicar bonificação fixa se existir
+    const bonusFixo = freelancerToAdd.bonus_fixo || 0;
+
     // Update otimista: adiciona imediatamente na UI
     const novoFestaFreelancer = {
       id: `temp-${Date.now()}`, // ID temporário
       festa_id: festaId,
       freelancer_id: freelancerId,
       valor_acordado: freelancerToAdd.valor_padrao,
-      valor_bonus: 0,
-      motivo_bonus: null,
+      valor_bonus: bonusFixo,
+      motivo_bonus: bonusFixo > 0 ? "Bonificação fixa do freelancer" : null,
       status_confirmacao: "pendente" as const,
       status_pagamento: "pendente" as const,
       freelancer: freelancerToAdd,

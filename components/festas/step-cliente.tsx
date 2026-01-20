@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Cliente } from "@/types";
 import { ClienteSelector } from "@/components/clientes/cliente-selector";
-import { UserCircle, UserPlus } from "lucide-react";
+import { UserCircle, UserPlus, CheckCircle, XCircle } from "lucide-react";
 
 interface StepClienteProps {
   formData: any;
@@ -59,6 +59,23 @@ export function StepCliente({ formData, setFormData, errors = {} }: StepClienteP
       });
     }
   };
+
+  // Validar CPF/CNPJ
+  const validarCpfCnpj = (valor: string): { valido: boolean; tipo: string | null } => {
+    const apenasNumeros = valor.replace(/\D/g, "");
+    
+    if (apenasNumeros.length === 11) {
+      return { valido: true, tipo: "CPF" };
+    } else if (apenasNumeros.length === 14) {
+      return { valido: true, tipo: "CNPJ" };
+    }
+    
+    return { valido: false, tipo: null };
+  };
+
+  const cpfCnpjStatus = formData.cliente_cpf_cnpj 
+    ? validarCpfCnpj(formData.cliente_cpf_cnpj) 
+    : { valido: false, tipo: null };
 
   return (
     <div className="space-y-6">
@@ -199,16 +216,59 @@ export function StepCliente({ formData, setFormData, errors = {} }: StepClienteP
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cliente_cpf_cnpj">CPF/CNPJ do Cliente</Label>
-                <Input
-                  id="cliente_cpf_cnpj"
-                  value={formData.cliente_cpf_cnpj || ""}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cliente_cpf_cnpj: e.target.value })
-                  }
-                  placeholder="Digite apenas números (CPF: 11 | CNPJ: 14)"
-                  maxLength={18}
-                />
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="cliente_cpf_cnpj">CPF/CNPJ do Cliente</Label>
+                  {formData.cliente_cpf_cnpj && cpfCnpjStatus.valido && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      {cpfCnpjStatus.tipo}
+                    </Badge>
+                  )}
+                  {formData.cliente_cpf_cnpj && !cpfCnpjStatus.valido && (
+                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Inválido
+                    </Badge>
+                  )}
+                </div>
+                <div className="relative">
+                  <Input
+                    id="cliente_cpf_cnpj"
+                    value={formData.cliente_cpf_cnpj || ""}
+                    onChange={(e) => {
+                      const valor = e.target.value.replace(/\D/g, "");
+                      setFormData({ ...formData, cliente_cpf_cnpj: valor });
+                    }}
+                    placeholder="Digite apenas números (CPF: 11 | CNPJ: 14)"
+                    maxLength={14}
+                    className={
+                      formData.cliente_cpf_cnpj 
+                        ? cpfCnpjStatus.valido 
+                          ? "border-green-300 focus-visible:ring-green-500"
+                          : "border-red-300 focus-visible:ring-red-500"
+                        : ""
+                    }
+                  />
+                  {formData.cliente_cpf_cnpj && (
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      {cpfCnpjStatus.valido ? (
+                        <CheckCircle className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-600" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {formData.cliente_cpf_cnpj && !cpfCnpjStatus.valido && (
+                  <p className="text-xs text-red-600">
+                    {formData.cliente_cpf_cnpj.replace(/\D/g, "").length} dígitos - CPF precisa ter 11 dígitos e CNPJ 14 dígitos
+                  </p>
+                )}
+                {formData.cliente_cpf_cnpj && cpfCnpjStatus.valido && (
+                  <p className="text-xs text-green-600">
+                    ✓ {cpfCnpjStatus.tipo} válido com {formData.cliente_cpf_cnpj.replace(/\D/g, "").length} dígitos
+                  </p>
+                )}
               </div>
               
               <p className="text-xs text-blue-700">

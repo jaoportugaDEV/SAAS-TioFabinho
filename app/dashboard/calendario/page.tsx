@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, Clock, User, ExternalLink } from "lucide-react";
+import { Calendar, Clock, User, ExternalLink, RefreshCw, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
@@ -30,13 +31,28 @@ export default function CalendarioPage() {
     });
   }, [selectedMonth]);
 
+  // Recarregar dados quando a página recebe foco (volta de outra página)
+  useEffect(() => {
+    const handleFocus = () => {
+      loadData();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [selectedMonth]);
+
   const loadData = async () => {
+    setLoading(true);
     try {
       // Carregar festas do mês selecionado
       const [year, month] = selectedMonth.split("-");
+      
+      // Calcular o último dia do mês corretamente
+      const ultimoDiaDoMes = new Date(Number(year), Number(month), 0).getDate();
       const startDate = `${year}-${month}-01`;
-      const endDate = `${year}-${month}-31`;
+      const endDate = `${year}-${month}-${String(ultimoDiaDoMes).padStart(2, "0")}`;
 
+      // Buscar festas sem cache
       const { data: festasData, error: festasError } = await supabase
         .from("festas")
         .select("*")
@@ -106,12 +122,23 @@ export default function CalendarioPage() {
             Visualize festas agendadas e disponibilidade de freelancers
           </p>
         </div>
-        <input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-4 py-2 border border-gray-300 rounded-md"
-        />
+        <div className="flex gap-2 items-center w-full sm:w-auto">
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-md flex-1 sm:flex-none"
+          />
+          <Button
+            onClick={() => loadData()}
+            variant="outline"
+            size="icon"
+            className="flex-shrink-0"
+            title="Recarregar festas"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -216,13 +243,23 @@ export default function CalendarioPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-2xl">
-              Festas - {selectedDay} de{" "}
-              {new Date(selectedMonth + "-01").toLocaleDateString("pt-BR", {
-                month: "long",
-                year: "numeric",
-              })}
-            </DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg sm:text-2xl">
+                Festas - {selectedDay} de{" "}
+                {new Date(selectedMonth + "-01").toLocaleDateString("pt-BR", {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setDialogOpen(false)}
+                className="flex-shrink-0 hover:bg-gray-100"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </DialogHeader>
           <div className="space-y-3 sm:space-y-4 mt-4">
             {festasDoDiaSelecionado.map((festa) => {

@@ -26,6 +26,7 @@ export interface Freelancer {
   whatsapp: string;
   pix: string;
   valor_padrao: number;
+  bonus_fixo?: number; // Bonificação fixa aplicada automaticamente ao adicionar em festas
   dias_disponiveis: string[]; // Array de datas ISO (deprecated - usar dias_semana_disponiveis)
   dias_semana_disponiveis: number[]; // Array de dias da semana (0=Domingo, 1=Segunda, ..., 6=Sábado)
   ativo: boolean;

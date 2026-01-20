@@ -150,6 +150,7 @@ export default function EditarFreelancerPage() {
           whatsapp: freelancer.whatsapp,
           pix: freelancer.pix,
           foto_url: fotoUrl || null,
+          bonus_fixo: freelancer.bonus_fixo || 0,
           ativo: freelancer.ativo,
           dias_semana_disponiveis: diasSemana,
         })
@@ -314,6 +315,41 @@ export default function EditarFreelancerPage() {
                 💡 O valor é definido pela função em <Link href="/dashboard/configuracoes" className="text-primary hover:underline">Configurações</Link>. 
                 Quando este freelancer for adicionado a uma festa, receberá automaticamente este valor.
               </p>
+            </div>
+
+            {/* Bonificação Fixa */}
+            <div className="space-y-2">
+              <Label htmlFor="bonus_fixo">Bonificação Fixa (Opcional)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                <Input
+                  id="bonus_fixo"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={freelancer.bonus_fixo || 0}
+                  onChange={(e) =>
+                    setFreelancer({ ...freelancer, bonus_fixo: parseFloat(e.target.value) || 0 })
+                  }
+                  onFocus={(e) => e.target.select()}
+                  className="pl-12"
+                  placeholder="0,00"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                💰 Este valor será <strong>adicionado automaticamente como bônus</strong> quando o freelancer for adicionado a uma festa. 
+                Útil para freelancers que sempre recebem um valor extra fixo.
+              </p>
+              {(freelancer.bonus_fixo || 0) > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900">
+                    ℹ️ Valor total ao adicionar em festas: <strong>R$ {(valorFuncao + (freelancer.bonus_fixo || 0)).toFixed(2)}</strong>
+                    <span className="text-xs block mt-1">
+                      (R$ {valorFuncao.toFixed(2)} base + R$ {(freelancer.bonus_fixo || 0).toFixed(2)} bônus)
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Status */}

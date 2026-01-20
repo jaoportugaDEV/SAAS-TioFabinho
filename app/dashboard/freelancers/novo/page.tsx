@@ -27,6 +27,7 @@ export default function NovoFreelancerPage() {
     whatsapp: "",
     pix: "",
     valor_padrao: 50, // Valor inicial para monitor
+    bonus_fixo: 0, // Bonificação fixa
     ativo: true,
   });
 
@@ -254,6 +255,39 @@ export default function NovoFreelancerPage() {
                   : "Defina o valor que este freelancer receberá por festa."
                 }
               </p>
+            </div>
+
+            {/* Bonificação Fixa */}
+            <div className="space-y-2">
+              <Label htmlFor="bonus_fixo">Bonificação Fixa (Opcional)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                <Input
+                  id="bonus_fixo"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={formData.bonus_fixo}
+                  onChange={(e) => setFormData({ ...formData, bonus_fixo: parseFloat(e.target.value) || 0 })}
+                  onFocus={(e) => e.target.select()}
+                  className="pl-12"
+                  placeholder="0,00"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                💰 Este valor será <strong>adicionado automaticamente como bônus</strong> quando o freelancer for adicionado a uma festa. 
+                Útil para freelancers que sempre recebem um valor extra fixo.
+              </p>
+              {formData.bonus_fixo > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-900">
+                    ℹ️ Valor total ao adicionar em festas: <strong>R$ {(formData.valor_padrao + formData.bonus_fixo).toFixed(2)}</strong>
+                    <span className="text-xs block mt-1">
+                      (R$ {formData.valor_padrao.toFixed(2)} base + R$ {formData.bonus_fixo.toFixed(2)} bônus)
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Status */}

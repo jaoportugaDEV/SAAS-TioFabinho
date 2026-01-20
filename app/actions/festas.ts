@@ -97,10 +97,10 @@ export async function deleteChecklistItem(itemId: string, festaId: string) {
 export async function addFreelancerToFesta(festaId: string, freelancerId: string) {
   const supabase = await createClient();
 
-  // Buscar a função do freelancer
+  // Buscar a função e bonificação fixa do freelancer
   const { data: freelancer, error: freelancerError } = await supabase
     .from("freelancers")
-    .select("funcao")
+    .select("funcao, bonus_fixo")
     .eq("id", freelancerId)
     .single();
 
@@ -121,15 +121,22 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
     // Se não encontrar, usa 0 como fallback
   }
 
-  // Inserir com o valor da função
-  const { error } = await supabase
+  // Aplicar bonificação fixa se existir
+  const bonusFixo = freelancer.bonus_fixo || 0;
+
+  // Inserir com o valor da função e bônus fixo
+  const { data, error } = await supabase
     .from("festa_freelancers")
     .insert({
       festa_id: festaId,
       freelancer_id: freelancerId,
       valor_acordado: valorFuncao?.valor || 0,
+      valor_bonus: bonusFixo,
+      motivo_bonus: bonusFixo > 0 ? "Bonificação fixa do freelancer" : null,
       status_pagamento: 'pendente',
-    });
+    })
+    .select()
+    .single();
 
   if (error) {
     console.error("Erro ao adicionar freelancer:", error);
@@ -137,7 +144,7 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
   }
 
   revalidatePath(`/dashboard/festas/${festaId}`);
-  return { success: true };
+  return { success: true, data };
 }
 
 // Remover freelancer da festa

@@ -33,7 +33,10 @@ interface DialogContentProps {
 
 export function DialogContent({ children, className = "" }: DialogContentProps) {
   return (
-    <div className={`bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto ${className}`}>
+    <div 
+      className={`bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto ${className}`}
+      onClick={(e) => e.stopPropagation()}
+    >
       {children}
     </div>
   );

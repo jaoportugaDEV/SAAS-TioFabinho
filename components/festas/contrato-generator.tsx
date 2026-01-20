@@ -290,8 +290,8 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
       }
       if (festa.faixas_etarias && festa.faixas_etarias.length > 0) {
         const faixasTexto = festa.faixas_etarias.map(f => {
-          if (f === "0-5") return "0-5 anos";
-          if (f === "6-12") return "6-12 anos";
+          if (f === "0-4") return "0-4 anos";
+          if (f === "5-12") return "5-12 anos";
           if (f === "13-17") return "13-17 anos";
           if (f === "18+") return "18+";
           return f;
