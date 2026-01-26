@@ -73,3 +73,48 @@ export function festaJaComecou(festaData: string, festaHorario?: string | null):
   }
 }
 
+/**
+ * Filtra festas removendo as que já começaram
+ * @param festas - Array de festas com data e horário
+ * @returns Array com apenas festas futuras
+ */
+export function filtrarFestasFuturas<T extends { data: string; horario?: string | null }>(festas: T[]): T[] {
+  return festas.filter(festa => !festaJaComecou(festa.data, festa.horario));
+}
+
+/**
+ * Gera mensagem formatada com todas as festas futuras para enviar via WhatsApp
+ * @param nomeFreelancer - Nome do freelancer
+ * @param festas - Array de festas futuras com título, data, horário e local
+ * @returns Mensagem formatada pronta para enviar
+ */
+export function gerarMensagemFestasFuturas(
+  nomeFreelancer: string,
+  festas: Array<{ titulo: string; data: string; horario?: string | null; local: string }>
+): string {
+  if (festas.length === 0) {
+    return `Olá ${nomeFreelancer}! Tudo bem?\n\nNo momento você não está escalado(a) em nenhuma festa futura.\n\nQualquer novidade, entro em contato!`;
+  }
+
+  let mensagem = `Olá ${nomeFreelancer}! Tudo bem?\n\nSeguem as festas que você está escalado(a):\n\n`;
+
+  festas.forEach((festa, index) => {
+    mensagem += `📅 ${festa.titulo}\n`;
+    mensagem += `Data: ${formatDate(festa.data)}\n`;
+    
+    if (festa.horario) {
+      mensagem += `Horário: ${festa.horario}\n`;
+    }
+    
+    mensagem += `Local: ${festa.local}\n`;
+    
+    // Adicionar linha em branco entre festas, exceto na última
+    if (index < festas.length - 1) {
+      mensagem += `\n`;
+    }
+  });
+
+  mensagem += `\nQualquer dúvida, estou à disposição!`;
+
+  return mensagem;
+}

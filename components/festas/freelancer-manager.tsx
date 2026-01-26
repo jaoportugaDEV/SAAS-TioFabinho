@@ -6,12 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle, DollarSign } from "lucide-react";
-import { formatPhone, whatsappLink } from "@/lib/utils";
+import { Plus, X, Users, MessageCircle, CheckCircle, Clock, Phone, AlertTriangle, DollarSign, Send } from "lucide-react";
+import { formatPhone, whatsappLink, filtrarFestasFuturas, gerarMensagemFestasFuturas } from "@/lib/utils";
 import {
   addFreelancerToFesta,
   removeFreelancerFromFesta,
   updateFreelancerConfirmacao,
+  getFestasFuturasFreelancer,
 } from "@/app/actions/festas";
 import { ValorComBonusDisplay } from "@/components/pagamentos/valor-com-bonus";
 import { EditarBonusDialog } from "@/components/pagamentos/editar-bonus-dialog";
@@ -52,6 +53,7 @@ export function FreelancerManager({
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [filtroFuncao, setFiltroFuncao] = useState<string>("todos");
+  const [loadingWhatsApp, setLoadingWhatsApp] = useState<string | null>(null); // ID do freelancer que está carregando
   
   // Estado para dialog de edição de bônus
   const [editandoBonus, setEditandoBonus] = useState<{
@@ -186,6 +188,35 @@ export function FreelancerManager({
       )
     );
     setEditandoBonus(null);
+  };
+
+  const handleEnviarWhatsApp = async (freelancer: Freelancer) => {
+    setLoadingWhatsApp(freelancer.id);
+
+    try {
+      // Buscar todas as festas do freelancer
+      const result = await getFestasFuturasFreelancer(freelancer.id);
+
+      if (!result.success || !result.data) {
+        alert("Erro ao buscar festas do freelancer. Tente novamente.");
+        setLoadingWhatsApp(null);
+        return;
+      }
+
+      // Filtrar apenas festas futuras
+      const festasFuturas = filtrarFestasFuturas(result.data);
+
+      // Gerar mensagem formatada
+      const mensagem = gerarMensagemFestasFuturas(freelancer.nome, festasFuturas);
+
+      // Abrir WhatsApp com a mensagem
+      window.open(whatsappLink(freelancer.whatsapp, mensagem), "_blank");
+    } catch (error) {
+      console.error("Erro ao enviar WhatsApp:", error);
+      alert("Erro ao preparar mensagem. Tente novamente.");
+    } finally {
+      setLoadingWhatsApp(null);
+    }
   };
 
 
@@ -434,11 +465,19 @@ export function FreelancerManager({
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => window.open(whatsappLink(festaFreelancer.freelancer.whatsapp), "_blank")}
-                      className="text-xs sm:text-sm text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
-                      title="Enviar mensagem no WhatsApp"
+                      onClick={() => handleEnviarWhatsApp(festaFreelancer.freelancer)}
+                      disabled={loadingWhatsApp === festaFreelancer.freelancer.id}
+                      className="text-xs sm:text-sm text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200 gap-1"
+                      title="Enviar horários e locais das festas futuras"
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      {loadingWhatsApp === festaFreelancer.freelancer.id ? (
+                        <Clock className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          <span className="hidden lg:inline">Enviar Festas</span>
+                        </>
+                      )}
                     </Button>
                     <Button
                       variant="ghost"

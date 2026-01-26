@@ -256,3 +256,40 @@ export async function sincronizarBonusFixoFreelancer(freelancerId: string) {
   };
 }
 
+// Buscar festas futuras de um freelancer
+export async function getFestasFuturasFreelancer(freelancerId: string) {
+  const supabase = await createClient();
+
+  // Buscar todas as festas onde o freelancer está escalado
+  const { data, error } = await supabase
+    .from("festa_freelancers")
+    .select(`
+      festa_id,
+      festas:festa_id (
+        id,
+        titulo,
+        data,
+        horario,
+        local
+      )
+    `)
+    .eq("freelancer_id", freelancerId);
+
+  if (error) {
+    console.error("Erro ao buscar festas do freelancer:", error);
+    return { success: false, error: error.message };
+  }
+
+  // Mapear e ordenar as festas por data
+  const festas = (data || [])
+    .map((item: any) => item.festas)
+    .filter((festa: any) => festa !== null)
+    .sort((a: any, b: any) => {
+      // Ordenar por data e horário
+      const dateA = new Date(`${a.data}T${a.horario || "00:00"}`);
+      const dateB = new Date(`${b.data}T${b.horario || "00:00"}`);
+      return dateA.getTime() - dateB.getTime();
+    });
+
+  return { success: true, data: festas };
+}
