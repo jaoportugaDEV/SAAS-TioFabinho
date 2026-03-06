@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import jsPDF from "jspdf";
 import { formatDate } from "@/lib/utils";
+import { useEmpresa } from "@/lib/empresa-context";
 
 interface ItemOrcamento {
   descricao: string;
@@ -44,7 +45,10 @@ export function OrcamentoPDFGenerator({
   size = "default",
   className = "" 
 }: OrcamentoPDFGeneratorProps) {
-  
+  const { empresa } = useEmpresa();
+  const nomeEmpresa = empresa?.nome ?? "Buffet";
+  const cidadeEstado = [empresa?.cidade, empresa?.estado].filter(Boolean).join(" - ");
+
   const generatePDF = () => {
     try {
       const doc = new jsPDF();
@@ -78,7 +82,7 @@ export function OrcamentoPDFGenerator({
       doc.rect(0, 0, pageWidth, 40, "F");
       
       doc.setTextColor(255, 255, 255);
-      addCenteredText("TIO FABINHO BUFFET", 15, 20, true);
+      addCenteredText(nomeEmpresa, 15, 20, true);
       addCenteredText("Orcamento de Servicos", 25, 12);
       
       doc.setTextColor(0, 0, 0);
@@ -265,7 +269,7 @@ export function OrcamentoPDFGenerator({
       doc.setFontSize(8);
       doc.setTextColor(128, 128, 128);
       doc.text(
-        "Tio Fabinho Buffet - Presidente Prudente, SP",
+        empresa?.nome && cidadeEstado ? `${empresa.nome} - ${cidadeEstado}` : nomeEmpresa,
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 10,
         { align: "center" }

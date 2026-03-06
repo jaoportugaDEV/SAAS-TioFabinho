@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Calendar, User, DollarSign } from "lucide-react";
+import { Search, Calendar, User, DollarSign, Trash2 } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
 import { OrcamentoPDFGenerator } from "./orcamento-pdf-generator";
+import { excluirOrcamento } from "@/app/actions/orcamentos";
 
 interface ItemOrcamento {
   descricao: string;
@@ -44,16 +45,31 @@ interface OrcamentosListProps {
   showEncerradas: boolean;
   onToggleEncerradas: (show: boolean) => void;
   quantidadeEncerradas: number;
+  onOrcamentoExcluido?: () => void;
 }
 
 export function OrcamentosList({ 
   orcamentos, 
   showEncerradas, 
   onToggleEncerradas, 
-  quantidadeEncerradas 
+  quantidadeEncerradas,
+  onOrcamentoExcluido,
 }: OrcamentosListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
+
+  const handleExcluir = async (orcamento: OrcamentoComFesta) => {
+    if (!confirm("Excluir este orçamento? Esta ação não pode ser desfeita.")) return;
+    setExcluindoId(orcamento.id);
+    const result = await excluirOrcamento(orcamento.id);
+    setExcluindoId(null);
+    if (result.success) {
+      onOrcamentoExcluido?.();
+    } else {
+      alert(result.error ?? "Erro ao excluir orçamento.");
+    }
+  };
 
   const filteredOrcamentos = orcamentos.filter((orcamento) => {
     const matchesSearch =
@@ -246,6 +262,22 @@ export function OrcamentosList({
                           Ver Festa
                         </Button>
                       </Link>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleExcluir(orcamento)}
+                        disabled={excluindoId === orcamento.id}
+                      >
+                        {excluindoId === orcamento.id ? (
+                          "Excluindo..."
+                        ) : (
+                          <>
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Excluir orçamento
+                          </>
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </div>

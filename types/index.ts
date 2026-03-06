@@ -1,5 +1,23 @@
 export type FuncaoFreelancer = 'monitor' | 'cozinheira' | 'garcom' | 'recepcao' | 'outros';
 
+export interface Empresa {
+  id: string;
+  nome: string;
+  slug: string;
+  logo_url: string | null;
+  cor_primaria: string;
+  cnpj: string | null;
+  razao_social: string | null;
+  endereco: string | null;
+  cidade: string | null;
+  estado: string | null;
+  telefone: string | null;
+  ativo: boolean;
+  locais?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export type StatusFesta = 'planejamento' | 'confirmada' | 'acontecendo' | 'encerrada_pendente' | 'encerrada' | 'cancelada';
 
 export type StatusPagamento = 'pendente' | 'pago_parcial' | 'pago_total';
@@ -105,6 +123,7 @@ export interface Contrato {
   template_html: string;
   pdf_url: string | null;
   created_at: string;
+  status?: string;
 }
 
 export interface ItemOrcamento {

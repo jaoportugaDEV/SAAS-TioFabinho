@@ -1,15 +1,19 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentEmpresaId } from "@/lib/server-empresa";
 import { RankingCliente, RankingFreelancer, DistribuicaoMensal, MesMaiorDemanda } from "@/types";
 
 // Buscar total de festas no período
 export async function getTotalFestasPeriodo(dataInicio: string, dataFim: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, total: 0 };
 
-  const { data, error, count } = await supabase
+  const { count, error } = await supabase
     .from("festas")
     .select("*", { count: "exact", head: true })
+    .eq("empresa_id", empresaId)
     .gte("data", dataInicio)
     .lte("data", dataFim);
 
@@ -24,11 +28,13 @@ export async function getTotalFestasPeriodo(dataInicio: string, dataFim: string)
 // Buscar ranking de clientes por período
 export async function getRankingClientes(dataInicio: string, dataFim: string): Promise<{ success: boolean; data: RankingCliente[] }> {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, data: [] };
 
-  // Buscar festas do período com cliente
   const { data: festas, error } = await supabase
     .from("festas")
     .select("cliente_id, cliente_nome")
+    .eq("empresa_id", empresaId)
     .gte("data", dataInicio)
     .lte("data", dataFim)
     .not("cliente_id", "is", null);
@@ -38,7 +44,6 @@ export async function getRankingClientes(dataInicio: string, dataFim: string): P
     return { success: false, data: [] };
   }
 
-  // Contar festas por cliente
   const clientesMap = new Map<string, { id: string; nome: string; total: number }>();
   
   festas?.forEach((festa) => {
@@ -52,7 +57,6 @@ export async function getRankingClientes(dataInicio: string, dataFim: string): P
     }
   });
 
-  // Converter para array e ordenar
   const ranking = Array.from(clientesMap.values())
     .sort((a, b) => b.total - a.total)
     .map((cliente, index) => ({
@@ -68,11 +72,13 @@ export async function getRankingClientes(dataInicio: string, dataFim: string): P
 // Buscar ranking de freelancers por período (apenas os que foram pagos)
 export async function getRankingFreelancers(dataInicio: string, dataFim: string): Promise<{ success: boolean; data: RankingFreelancer[] }> {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, data: [] };
 
-  // Buscar festas do período
   const { data: festas, error: festasError } = await supabase
     .from("festas")
     .select("id")
+    .eq("empresa_id", empresaId)
     .gte("data", dataInicio)
     .lte("data", dataFim);
 
@@ -87,7 +93,6 @@ export async function getRankingFreelancers(dataInicio: string, dataFim: string)
 
   const festasIds = festas.map((f) => f.id);
 
-  // Buscar pagamentos de freelancers nessas festas (apenas os que têm pagamento registrado)
   const { data: pagamentos, error: pagamentosError } = await supabase
     .from("pagamentos_freelancers")
     .select(`
@@ -95,6 +100,7 @@ export async function getRankingFreelancers(dataInicio: string, dataFim: string)
       festa_id,
       freelancer:freelancers(nome, funcao)
     `)
+    .eq("empresa_id", empresaId)
     .in("festa_id", festasIds);
 
   if (pagamentosError) {
@@ -102,7 +108,6 @@ export async function getRankingFreelancers(dataInicio: string, dataFim: string)
     return { success: false, data: [] };
   }
 
-  // Contar festas por freelancer (apenas festas com pagamento registrado)
   const freelancersMap = new Map<string, { id: string; nome: string; funcao: string; festas: Set<string> }>();
 
   pagamentos?.forEach((pag: any) => {
@@ -123,7 +128,6 @@ export async function getRankingFreelancers(dataInicio: string, dataFim: string)
     }
   });
 
-  // Converter para array e ordenar
   const ranking = Array.from(freelancersMap.values())
     .map((freelancer) => ({
       freelancer_id: freelancer.id,
@@ -144,10 +148,13 @@ export async function getRankingFreelancers(dataInicio: string, dataFim: string)
 // Buscar distribuição de festas por mês do ano
 export async function getDistribuicaoFestasAno(ano: number): Promise<{ success: boolean; data: DistribuicaoMensal[] }> {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, data: [] };
 
   const { data: festas, error } = await supabase
     .from("festas")
     .select("data")
+    .eq("empresa_id", empresaId)
     .gte("data", `${ano}-01-01`)
     .lte("data", `${ano}-12-31`);
 
@@ -161,16 +168,14 @@ export async function getDistribuicaoFestasAno(ano: number): Promise<{ success: 
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
-  // Inicializar todos os meses com 0
   const distribuicao = mesesNomes.map((nome, index) => ({
     mes: index + 1,
     mes_nome: nome,
     total_festas: 0,
   }));
 
-  // Contar festas por mês
   festas?.forEach((festa) => {
-    const mes = new Date(festa.data + "T00:00:00").getMonth(); // 0-11
+    const mes = new Date(festa.data + "T00:00:00").getMonth();
     distribuicao[mes].total_festas++;
   });
 
@@ -187,16 +192,13 @@ export async function getMesMaiorDemanda(ano: number): Promise<{ success: boolea
 
   const distribuicao = resultDistribuicao.data;
   
-  // Encontrar mês com mais festas
   const mesMaior = distribuicao.reduce((max, mes) => 
     mes.total_festas > max.total_festas ? mes : max
   , distribuicao[0]);
 
-  // Calcular média mensal
   const totalFestas = distribuicao.reduce((acc, mes) => acc + mes.total_festas, 0);
   const mediaMensal = totalFestas / 12;
 
-  // Calcular percentual acima da média
   const percentualAcimaMedia = mediaMensal > 0 
     ? ((mesMaior.total_festas - mediaMensal) / mediaMensal) * 100
     : 0;
@@ -215,10 +217,13 @@ export async function getMesMaiorDemanda(ano: number): Promise<{ success: boolea
 // Buscar total de clientes únicos no período
 export async function getTotalClientesPeriodo(dataInicio: string, dataFim: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, total: 0 };
 
   const { data: festas, error } = await supabase
     .from("festas")
     .select("cliente_id")
+    .eq("empresa_id", empresaId)
     .gte("data", dataInicio)
     .lte("data", dataFim)
     .not("cliente_id", "is", null);
@@ -228,7 +233,6 @@ export async function getTotalClientesPeriodo(dataInicio: string, dataFim: strin
     return { success: false, total: 0 };
   }
 
-  // Contar clientes únicos
   const clientesUnicos = new Set(festas?.map((f) => f.cliente_id));
 
   return { success: true, total: clientesUnicos.size };
@@ -237,11 +241,13 @@ export async function getTotalClientesPeriodo(dataInicio: string, dataFim: strin
 // Buscar total de freelancers únicos no período (apenas os que têm pagamento)
 export async function getTotalFreelancersPeriodo(dataInicio: string, dataFim: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, total: 0 };
 
-  // Buscar festas do período
   const { data: festas, error: festasError } = await supabase
     .from("festas")
     .select("id")
+    .eq("empresa_id", empresaId)
     .gte("data", dataInicio)
     .lte("data", dataFim);
 
@@ -251,10 +257,10 @@ export async function getTotalFreelancersPeriodo(dataInicio: string, dataFim: st
 
   const festasIds = festas.map((f) => f.id);
 
-  // Buscar pagamentos de freelancers dessas festas
   const { data: pagamentos, error: pagamentosError } = await supabase
     .from("pagamentos_freelancers")
     .select("freelancer_id")
+    .eq("empresa_id", empresaId)
     .in("festa_id", festasIds);
 
   if (pagamentosError) {
@@ -262,7 +268,6 @@ export async function getTotalFreelancersPeriodo(dataInicio: string, dataFim: st
     return { success: false, total: 0 };
   }
 
-  // Contar freelancers únicos que têm pagamento
   const freelancersUnicos = new Set(pagamentos?.map((pag) => pag.freelancer_id));
 
   return { success: true, total: freelancersUnicos.size };

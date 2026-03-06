@@ -4,12 +4,13 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Festa, ChecklistItem, Freelancer, FestaFreelancer, Orcamento } from "@/types";
 import { formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, MapPin, User, Phone } from "lucide-react";
+import { ArrowLeft, Calendar, MapPin, User, Phone, AlertCircle } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { StatusSelector } from "@/components/festas/status-selector";
 import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
@@ -34,6 +35,7 @@ export default function DetalheFestaPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { empresaId } = useEmpresa();
   const supabase = createClient();
   const pagamentoRef = useRef<HTMLDivElement>(null);
   const [festa, setFesta] = useState<Festa | null>(null);
@@ -76,12 +78,14 @@ export default function DetalheFestaPage() {
   }, [searchParams, loading]);
 
   const loadFestaData = async () => {
+    if (!empresaId) return;
     try {
       // Carregar festa
       const { data: festaData, error: festaError } = await supabase
         .from("festas")
         .select("*")
         .eq("id", params.id)
+        .eq("empresa_id", empresaId)
         .single();
 
       if (festaError) throw festaError;
@@ -92,6 +96,7 @@ export default function DetalheFestaPage() {
         .from("checklist")
         .select("*")
         .eq("festa_id", params.id)
+        .eq("empresa_id", empresaId)
         .order("ordem", { ascending: true });
 
       if (!checklistError && checklistData) {
@@ -124,6 +129,7 @@ export default function DetalheFestaPage() {
       const { data: availableData, error: availableError } = await supabase
         .from("freelancers")
         .select("*")
+        .eq("empresa_id", empresaId)
         .eq("ativo", true)
         .not("id", "in", `(${freelancersNaFesta.length > 0 ? freelancersNaFesta.join(",") : "null"})`);
 
@@ -136,6 +142,7 @@ export default function DetalheFestaPage() {
         .from("orcamentos")
         .select("*")
         .eq("festa_id", params.id)
+        .eq("empresa_id", empresaId)
         .single();
 
       if (!orcamentoError && orcamentoData) {
@@ -147,7 +154,8 @@ export default function DetalheFestaPage() {
         const { count } = await supabase
           .from("festas")
           .select("*", { count: "exact", head: true })
-          .eq("cliente_id", festaData.cliente_id);
+          .eq("cliente_id", festaData.cliente_id)
+          .eq("empresa_id", empresaId);
         
         if (count) {
           setTotalFestasCliente(count);
@@ -240,6 +248,24 @@ export default function DetalheFestaPage() {
           freelancersPendentes={freelancersPendentes}
           totalPendente={totalPendente}
         />
+      )}
+
+      {/* Alerta: festa sem orçamento */}
+      {!orcamento && !loading && (
+        <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-yellow-800">Esta festa não tem orçamento</p>
+              <p className="text-sm text-yellow-700">Adicione um orçamento para registrar os valores.</p>
+            </div>
+          </div>
+          <Link href={`/dashboard/festas/${festa.id}/editar?step=4`}>
+            <Button size="sm" className="bg-yellow-600 hover:bg-yellow-700 text-white whitespace-nowrap">
+              Adicionar Orçamento
+            </Button>
+          </Link>
+        </div>
       )}
 
       {/* Informações Principais */}

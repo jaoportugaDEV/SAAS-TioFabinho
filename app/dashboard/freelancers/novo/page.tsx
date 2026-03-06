@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +17,7 @@ import { VALORES_PADRAO_POR_FUNCAO } from "@/lib/constants";
 export default function NovoFreelancerPage() {
   const router = useRouter();
   const supabase = createClient();
-  
+  const { empresaId } = useEmpresa();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fotoUrl, setFotoUrl] = useState<string>("");
@@ -87,8 +88,13 @@ export default function NovoFreelancerPage() {
     setLoading(true);
 
     try {
+      if (!empresaId) {
+        alert("Empresa não selecionada.");
+        return;
+      }
       const { error } = await supabase.from("freelancers").insert([
         {
+          empresa_id: empresaId,
           ...formData,
           foto_url: fotoUrl || null,
           dias_disponiveis: [],

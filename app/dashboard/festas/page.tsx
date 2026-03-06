@@ -12,11 +12,12 @@ import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock, AlertCircle, D
 import { formatDate, festaJaComecou } from "@/lib/utils";
 import { autoUpdateFestaStatus, checkAndUpdatePagamentosCompletos } from "@/app/actions/auto-update-status";
 
-// Interface estendida para incluir informações de pagamento
+// Interface estendida para incluir informações de pagamento e orçamento
 interface FestaComPagamentos extends Festa {
   clientePagou?: boolean;
   freelancersReceberam?: boolean;
   statusPagamentoCliente?: 'pendente' | 'pago_parcial' | 'pago_total';
+  temOrcamento?: boolean;
 }
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -79,6 +80,8 @@ export default function FestasPage() {
             clientePagou = orcamento.status_pagamento === "pago_total";
           }
 
+          const temOrcamento = !!orcamento;
+
           // Verificar pagamento dos freelancers
           if (festa.status_pagamento_freelancers) {
             freelancersReceberam = festa.status_pagamento_freelancers === "pago";
@@ -88,7 +91,8 @@ export default function FestasPage() {
             ...festa,
             clientePagou,
             freelancersReceberam,
-            statusPagamentoCliente
+            statusPagamentoCliente,
+            temOrcamento,
           };
         })
       );
@@ -369,6 +373,18 @@ export default function FestasPage() {
 
                     {/* Badges de Pagamento - Separados por Cliente e Freelancers */}
                     <div className="flex flex-wrap gap-1.5 mt-2">
+                      {/* Alerta: Festa sem orçamento */}
+                      {!festa.temOrcamento && (
+                        <Link
+                          href={`/dashboard/festas/${festa.id}/editar?step=4`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Badge className="bg-yellow-500 text-white border-yellow-600 cursor-pointer hover:bg-yellow-600 transition-all text-xs">
+                            <AlertCircle className="w-3 h-3 mr-1" />
+                            Sem Orçamento
+                          </Badge>
+                        </Link>
+                      )}
                       {/* Badge: Pagamento do Cliente */}
                       {festa.statusPagamentoCliente && (
                         <Badge 

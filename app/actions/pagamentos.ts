@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentEmpresaId } from "@/lib/server-empresa";
 import { revalidatePath } from "next/cache";
 import { checkAndUpdatePagamentosCompletos } from "./auto-update-status";
 
@@ -11,6 +12,20 @@ export async function updateValorFreelancerFesta(
   novoValor: number
 ) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
+
+  // Confirmar que a festa pertence à empresa
+  const { data: festa, error: festaError } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (festaError || !festa) {
+    return { success: false, error: "Festa não encontrada na empresa atual" };
+  }
 
   const { error } = await supabase
     .from("festa_freelancers")
@@ -35,8 +50,21 @@ export async function marcarPagamentoComoRealizado(
   pago: boolean
 ) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // Buscar o valor acordado + bônus do freelancer
+  // Confirmar que a festa pertence à empresa
+  const { data: festa, error: festaError } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (festaError || !festa) {
+    return { success: false, error: "Festa não encontrada na empresa atual" };
+  }
+
   const { data: festaFreelancer, error: fetchError } = await supabase
     .from("festa_freelancers")
     .select("valor_acordado, valor_bonus, motivo_bonus")
@@ -54,7 +82,6 @@ export async function marcarPagamentoComoRealizado(
   const valorTotal = valorBase + valorBonus;
 
   if (pago) {
-    // Preparar observações
     let observacoes = "Pagamento registrado via sistema";
     if (valorBonus > 0) {
       observacoes = `Pagamento registrado via sistema (Base: R$ ${valorBase.toFixed(2)} + Bônus: R$ ${valorBonus.toFixed(2)})`;
@@ -63,14 +90,14 @@ export async function marcarPagamentoComoRealizado(
       }
     }
 
-    // Marcar como pago: criar registro na tabela pagamentos_freelancers
     const { error: pagamentoError } = await supabase
       .from("pagamentos_freelancers")
       .insert({
+        empresa_id: empresaId,
         festa_id: festaId,
         freelancer_id: freelancerId,
         valor: valorTotal,
-        data_pagamento: new Date().toISOString().split('T')[0], // Data de hoje
+        data_pagamento: new Date().toISOString().split('T')[0],
         observacoes
       });
 
@@ -79,12 +106,12 @@ export async function marcarPagamentoComoRealizado(
       return { success: false, error: pagamentoError.message };
     }
   } else {
-    // Desmarcar como pago: remover registro da tabela pagamentos_freelancers
     const { error: deleteError } = await supabase
       .from("pagamentos_freelancers")
       .delete()
       .eq("festa_id", festaId)
-      .eq("freelancer_id", freelancerId);
+      .eq("freelancer_id", freelancerId)
+      .eq("empresa_id", empresaId);
 
     if (deleteError) {
       console.error("Erro ao remover registro de pagamento:", deleteError);
@@ -92,7 +119,6 @@ export async function marcarPagamentoComoRealizado(
     }
   }
 
-  // Atualizar status de pagamento do freelancer na festa
   const { error: updateError } = await supabase
     .from("festa_freelancers")
     .update({ status_pagamento: pago ? "pago" : "pendente" })
@@ -104,7 +130,6 @@ export async function marcarPagamentoComoRealizado(
     return { success: false, error: updateError.message };
   }
 
-  // Recalcular status geral de pagamento da festa
   await atualizarStatusPagamentoFesta(festaId);
 
   revalidatePath(`/dashboard/festas/${festaId}`);
@@ -116,8 +141,9 @@ export async function marcarPagamentoComoRealizado(
 // Recalcular e atualizar status geral de pagamento da festa
 export async function atualizarStatusPagamentoFesta(festaId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // Buscar todos os freelancers da festa
   const { data: freelancers, error: fetchError } = await supabase
     .from("festa_freelancers")
     .select("status_pagamento")
@@ -129,15 +155,14 @@ export async function atualizarStatusPagamentoFesta(festaId: string) {
   }
 
   if (!freelancers || freelancers.length === 0) {
-    // Se não há freelancers, marca como pago
     await supabase
       .from("festas")
       .update({ status_pagamento_freelancers: "pago" })
-      .eq("id", festaId);
+      .eq("id", festaId)
+      .eq("empresa_id", empresaId);
     return { success: true };
   }
 
-  // Verificar status dos pagamentos
   const todosPagos = freelancers.every(f => f.status_pagamento === "pago");
   const algumPago = freelancers.some(f => f.status_pagamento === "pago");
   
@@ -151,18 +176,17 @@ export async function atualizarStatusPagamentoFesta(festaId: string) {
     statusGeral = "pendente";
   }
 
-  // Atualizar status geral da festa
   const { error: updateError } = await supabase
     .from("festas")
     .update({ status_pagamento_freelancers: statusGeral })
-    .eq("id", festaId);
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId);
 
   if (updateError) {
     console.error("Erro ao atualizar status geral:", updateError);
     return { success: false, error: updateError.message };
   }
 
-  // Verificar se a festa pode mudar de "encerrada_pendente" para "encerrada"
   await checkAndUpdatePagamentosCompletos();
 
   revalidatePath(`/dashboard/festas/${festaId}`);
@@ -174,10 +198,11 @@ export async function atualizarStatusPagamentoFesta(festaId: string) {
 // Buscar festas com pagamentos pendentes
 export async function getFestasPagamentosPendentes() {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada", data: [] };
 
-  // Buscar festas que já passaram e têm status de pagamento pendente ou parcial
   const agora = new Date();
-  const dataHoje = agora.toISOString().split('T')[0]; // YYYY-MM-DD
+  const dataHoje = agora.toISOString().split('T')[0];
 
   const { data: festas, error } = await supabase
     .from("festas")
@@ -199,6 +224,7 @@ export async function getFestasPagamentosPendentes() {
         )
       )
     `)
+    .eq("empresa_id", empresaId)
     .lte("data", dataHoje)
     .in("status_pagamento_freelancers", ["pendente", "parcial"])
     .order("data", { ascending: false });
@@ -208,14 +234,11 @@ export async function getFestasPagamentosPendentes() {
     return { success: false, error: error.message, data: [] };
   }
 
-  // Filtrar festas que realmente já passaram (considerando horário se disponível)
   const festasFiltradas = festas?.filter(festa => {
     if (!festa.horario) {
-      // Se não tem horário, considera apenas a data
       return festa.data <= dataHoje;
     }
     
-    // Se tem horário, verifica se data + horário já passou
     const [horas, minutos] = festa.horario.split(':').map(Number);
     const dataFestaCompleta = new Date(festa.data + 'T00:00:00');
     dataFestaCompleta.setHours(horas, minutos, 0, 0);
@@ -245,10 +268,23 @@ export async function updateBonusFreelancerFesta(
   motivoBonus?: string | null
 ) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // Validação
   if (valorBonus < 0) {
     return { success: false, error: "O valor do bônus não pode ser negativo" };
+  }
+
+  // Confirmar que a festa pertence à empresa
+  const { data: festa, error: festaError } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (festaError || !festa) {
+    return { success: false, error: "Festa não encontrada na empresa atual" };
   }
 
   const { error } = await supabase
@@ -277,20 +313,32 @@ export async function removerFreelancerDaFesta(
   freelancerId: string
 ) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // 1. Remover registro de pagamento (se existir)
+  // Confirmar que a festa pertence à empresa
+  const { data: festa, error: festaError } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (festaError || !festa) {
+    return { success: false, error: "Festa não encontrada na empresa atual" };
+  }
+
   const { error: pagamentoError } = await supabase
     .from("pagamentos_freelancers")
     .delete()
     .eq("festa_id", festaId)
-    .eq("freelancer_id", freelancerId);
+    .eq("freelancer_id", freelancerId)
+    .eq("empresa_id", empresaId);
 
   if (pagamentoError) {
     console.error("Erro ao remover pagamento:", pagamentoError);
-    // Não retorna erro, pois pode não existir pagamento ainda
   }
 
-  // 2. Remover freelancer da festa
   const { error: festaFreelancerError } = await supabase
     .from("festa_freelancers")
     .delete()
@@ -302,7 +350,6 @@ export async function removerFreelancerDaFesta(
     return { success: false, error: festaFreelancerError.message };
   }
 
-  // 3. Recalcular status de pagamento da festa
   await atualizarStatusPagamentoFesta(festaId);
 
   revalidatePath(`/dashboard/festas/${festaId}`);
@@ -312,4 +359,3 @@ export async function removerFreelancerDaFesta(
   revalidatePath("/dashboard/relatorios");
   return { success: true };
 }
-

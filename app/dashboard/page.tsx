@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PartyPopper, Users, DollarSign, Calendar, ArrowRight, UserCircle } from "lucide-react";
@@ -10,6 +11,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import { autoUpdateFestaStatus } from "@/app/actions/auto-update-status";
 
 export default function DashboardPage() {
+  const { empresa } = useEmpresa();
   const [stats, setStats] = useState({
     festasDoMes: 0,
     freelancersAtivos: 0,
@@ -35,10 +37,14 @@ export default function DashboardPage() {
       const startDate = `${year}-${month}-01`;
       const endDate = `${year}-${month}-31`;
 
+      const empresaId = empresa?.id;
+      if (!empresaId) return;
+
       // Festas do mês
       const { data: festas } = await supabase
         .from("festas")
         .select("*")
+        .eq("empresa_id", empresaId)
         .gte("data", startDate)
         .lte("data", endDate);
 
@@ -46,12 +52,14 @@ export default function DashboardPage() {
       const { data: freelancers } = await supabase
         .from("freelancers")
         .select("id")
+        .eq("empresa_id", empresaId)
         .eq("ativo", true);
 
       // Clientes ativos
       const { data: clientes } = await supabase
         .from("clientes")
         .select("id")
+        .eq("empresa_id", empresaId)
         .eq("ativo", true);
 
       // Faturamento
@@ -69,6 +77,7 @@ export default function DashboardPage() {
       const { data: proximasFestas } = await supabase
         .from("festas")
         .select("*")
+        .eq("empresa_id", empresaId)
         .gte("data", now.toISOString().split("T")[0])
         .order("data")
         .limit(10); // Pegamos 10 para filtrar e garantir 5 válidas
@@ -132,7 +141,7 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-sm sm:text-base text-gray-500 mt-1">
-          Bem-vinda ao sistema de gestão do Tio Fabinho Buffet
+          Bem-vinda ao sistema de gestão {empresa?.nome ? `do ${empresa.nome}` : "de festas"}
         </p>
       </div>
 

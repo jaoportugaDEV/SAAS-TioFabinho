@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Freelancer } from "@/types";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -23,6 +24,7 @@ const funcaoLabels: Record<string, string> = {
 };
 
 export function StepFreelancers({ formData, setFormData }: StepFreelancersProps) {
+  const { empresaId } = useEmpresa();
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroFuncao, setFiltroFuncao] = useState<string>("todos");
@@ -30,13 +32,15 @@ export function StepFreelancers({ formData, setFormData }: StepFreelancersProps)
 
   useEffect(() => {
     loadFreelancers();
-  }, []);
+  }, [empresaId]);
 
   const loadFreelancers = async () => {
+    if (!empresaId) return;
     try {
       const { data, error } = await supabase
         .from("freelancers")
         .select("*")
+        .eq("empresa_id", empresaId)
         .eq("ativo", true)
         .order("nome");
 

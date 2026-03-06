@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Save } from "lucide-react";
@@ -25,8 +26,11 @@ const steps = [
 export default function EditarFestaPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
+  const stepParam = Math.min(5, Math.max(1, parseInt(searchParams.get("step") || "1", 10) || 1));
   const supabase = createClient();
-  const [currentStep, setCurrentStep] = useState(1);
+  const { empresaId } = useEmpresa();
+  const [currentStep, setCurrentStep] = useState(stepParam);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -183,6 +187,10 @@ export default function EditarFestaPage() {
       alert("Por favor, preencha todos os campos obrigatórios antes de salvar.");
       return;
     }
+    if (!empresaId) {
+      alert("Empresa não selecionada.");
+      return;
+    }
 
     setLoading(true);
 
@@ -249,6 +257,7 @@ export default function EditarFestaPage() {
         const { data: valoresFuncoes, error: valoresError } = await supabase
           .from("valores_funcoes")
           .select("funcao, valor")
+          .eq("empresa_id", empresaId)
           .in("funcao", funcoes);
 
         if (valoresError) throw valoresError;
@@ -289,7 +298,10 @@ export default function EditarFestaPage() {
         .eq("festa_id", params.id)
         .single();
 
+      let orcamentoId: string | null = null;
+
       if (orcamentoExistente) {
+        orcamentoId = orcamentoExistente.id;
         // Atualizar orçamento existente
         const { error: orcamentoError } = await supabase
           .from("orcamentos")
@@ -298,26 +310,74 @@ export default function EditarFestaPage() {
             desconto: formData.orcamento.desconto,
             acrescimo: formData.orcamento.acrescimo,
             total,
+            forma_pagamento: formData.orcamento.forma_pagamento,
+            quantidade_parcelas: formData.orcamento.quantidade_parcelas,
+            entrada: formData.orcamento.entrada,
           })
           .eq("festa_id", params.id);
 
         if (orcamentoError) throw orcamentoError;
       } else {
         // Criar novo orçamento
-        const { error: orcamentoError } = await supabase
+        const { data: novoOrcamento, error: orcamentoError } = await supabase
           .from("orcamentos")
           .insert([
             {
+              empresa_id: empresaId,
               festa_id: params.id,
               itens: formData.orcamento.itens,
               desconto: formData.orcamento.desconto,
               acrescimo: formData.orcamento.acrescimo,
               total,
               status_pagamento: "pendente",
+              forma_pagamento: formData.orcamento.forma_pagamento,
+              quantidade_parcelas: formData.orcamento.quantidade_parcelas,
+              entrada: formData.orcamento.entrada,
             },
-          ]);
+          ])
+          .select("id")
+          .single();
 
         if (orcamentoError) throw orcamentoError;
+        orcamentoId = novoOrcamento?.id ?? null;
+      }
+
+      // Recriar parcelas se pagamento parcelado
+      if (orcamentoId) {
+        // Apagar parcelas antigas
+        await supabase
+          .from("parcelas_pagamento")
+          .delete()
+          .eq("orcamento_id", orcamentoId);
+
+        if (formData.orcamento.forma_pagamento === "parcelado" && formData.orcamento.quantidade_parcelas >= 2) {
+          const valorParcelar = total - formData.orcamento.entrada;
+          const valorParcela = valorParcelar / formData.orcamento.quantidade_parcelas;
+          const dataFesta = new Date(formData.data);
+
+          const parcelas = [];
+          for (let i = 1; i <= formData.orcamento.quantidade_parcelas; i++) {
+            const dataVencimento = new Date(dataFesta);
+            dataVencimento.setMonth(dataVencimento.getMonth() + i - 1);
+            parcelas.push({
+              empresa_id: empresaId,
+              orcamento_id: orcamentoId,
+              festa_id: params.id,
+              numero_parcela: i,
+              valor: valorParcela,
+              data_vencimento: dataVencimento.toISOString().split("T")[0],
+              status: "pendente" as const,
+            });
+          }
+
+          const { error: parcelasError } = await supabase
+            .from("parcelas_pagamento")
+            .insert(parcelas);
+
+          if (parcelasError) {
+            console.error("Erro ao criar parcelas:", parcelasError);
+          }
+        }
       }
 
       // 4. Atualizar checklist - remover todos e adicionar novos
@@ -328,6 +388,7 @@ export default function EditarFestaPage() {
 
       if (formData.checklist.length > 0) {
         const checklistInserts = formData.checklist.map((tarefa, index) => ({
+          empresa_id: empresaId,
           festa_id: params.id,
           tarefa,
           concluido: false,
@@ -344,9 +405,15 @@ export default function EditarFestaPage() {
       alert("Festa atualizada com sucesso!");
       router.push(`/dashboard/festas/${params.id}`);
       router.refresh();
-    } catch (error) {
-      console.error("Erro ao atualizar festa:", error);
-      alert("Erro ao atualizar festa. Tente novamente.");
+    } catch (error: unknown) {
+      const msg =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message?: string }).message)
+          : error instanceof Error
+            ? error.message
+            : "Erro desconhecido";
+      console.error("Erro ao atualizar festa:", msg, error);
+      alert(`Erro ao atualizar festa: ${msg}`);
     } finally {
       setLoading(false);
     }

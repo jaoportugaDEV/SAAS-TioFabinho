@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ interface ContratoComFesta {
   template_html: string;
   pdf_url: string | null;
   created_at: string;
+  status?: string;
   festa: {
     id: string;
     titulo: string;
@@ -34,6 +36,9 @@ interface ContratoComFesta {
 }
 
 export function ContratosList() {
+  const { empresa, empresaId } = useEmpresa();
+  const nomeEmpresa = empresa?.nome || "Buffet";
+  const cidadeEstado = [empresa?.cidade, empresa?.estado].filter(Boolean).join(" - ") || "Brasil";
   const [contratos, setContratos] = useState<ContratoComFesta[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,9 +47,10 @@ export function ContratosList() {
 
   useEffect(() => {
     loadContratos();
-  }, []);
+  }, [empresaId]);
 
   const loadContratos = async () => {
+    if (!empresaId) return;
     try {
       setLoading(true);
       
@@ -56,8 +62,10 @@ export function ContratosList() {
           festa_id,
           template_html,
           pdf_url,
-          created_at
+          created_at,
+          status
         `)
+        .eq("empresa_id", empresaId)
         .order("created_at", { ascending: false });
 
       if (contratosError) throw contratosError;
@@ -72,6 +80,7 @@ export function ContratosList() {
       const { data: festasData, error: festasError } = await supabase
         .from("festas")
         .select("id, titulo, data, cliente_nome, status, tema, local, horario")
+        .eq("empresa_id", empresaId)
         .in("id", festaIds);
 
       if (festasError) throw festasError;
@@ -143,7 +152,7 @@ export function ContratosList() {
       doc.rect(0, 0, pageWidth, 40, "F");
       
       doc.setTextColor(255, 255, 255);
-      addCenteredText("TIO FABINHO BUFFET", 15, 20, true);
+      addCenteredText((nomeEmpresa || "BUFFET").toUpperCase(), 15, 20, true);
       addCenteredText("Contrato de Prestacao de Servicos", 25, 12);
       
       doc.setTextColor(0, 0, 0);
@@ -246,7 +255,7 @@ export function ContratosList() {
         yPosition = 20;
       }
 
-      yPosition = addText("Presidente Prudente, SP, " + formatDate(contrato.created_at), yPosition, 10);
+      yPosition = addText(`${cidadeEstado || "Brasil"}, ${formatDate(contrato.created_at)}`, yPosition, 10);
       yPosition += 20;
 
       doc.line(margin, yPosition, margin + 70, yPosition);
@@ -265,7 +274,7 @@ export function ContratosList() {
       doc.setFontSize(8);
       doc.setTextColor(128, 128, 128);
       doc.text(
-        "Tio Fabinho Buffet - Presidente Prudente, SP",
+        cidadeEstado ? `${nomeEmpresa} - ${cidadeEstado}` : nomeEmpresa,
         pageWidth / 2,
         doc.internal.pageSize.getHeight() - 10,
         { align: "center" }
@@ -283,7 +292,12 @@ export function ContratosList() {
       contrato.festa.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contrato.festa.cliente_nome.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesStatus = statusFilter === "all" || contrato.festa.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all"
+        ? true
+        : statusFilter === "cancelado"
+          ? contrato.status === "cancelado"
+          : contrato.festa.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -338,6 +352,7 @@ export function ContratosList() {
               <option value="planejamento">Planejamento</option>
               <option value="confirmada">Confirmada</option>
               <option value="concluida">Concluída</option>
+              <option value="cancelado">Cancelado</option>
             </select>
           </div>
         </CardContent>
@@ -363,7 +378,10 @@ export function ContratosList() {
       ) : (
         <div className="grid gap-4">
           {filteredContratos.map((contrato) => (
-            <Card key={contrato.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={contrato.id}
+              className={`hover:shadow-md transition-shadow ${contrato.status === "cancelado" ? "opacity-60" : ""}`}
+            >
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1 space-y-2">
@@ -383,7 +401,12 @@ export function ContratosList() {
                             {formatDate(contrato.festa.data)}
                           </span>
                         </div>
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {contrato.status === "cancelado" && (
+                            <Badge className="bg-red-100 text-red-800 border border-red-200">
+                              Cancelado
+                            </Badge>
+                          )}
                           {getStatusBadge(contrato.festa.status)}
                           {contrato.orcamento && (
                             <Badge className="bg-green-100 text-green-800">

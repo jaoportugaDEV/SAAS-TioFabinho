@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -36,6 +37,8 @@ const categoriaLabels: Record<CategoriaDespesa, string> = {
 };
 
 export default function FinanceiroPage() {
+  const { empresa } = useEmpresa();
+  const pdfBranding = empresa ? { nome: empresa.nome, cidade: empresa.cidade, estado: empresa.estado, cor_primaria: empresa.cor_primaria } : null;
   const [stats, setStats] = useState({
     totalReceitas: 0,
     totalDespesasFreelancers: 0,
@@ -83,10 +86,13 @@ export default function FinanceiroPage() {
       const lastDay = new Date(anoAtual, mesAtual, 0).getDate();
       const endDate = `${anoAtual}-${mes}-${lastDay}`;
 
+      if (!empresa?.id) return;
+
       // Carregar festas do mês
       const { data: festas, error: festasError } = await supabase
         .from("festas")
         .select("id")
+        .eq("empresa_id", empresa.id)
         .gte("data", startDate)
         .lte("data", endDate);
 
@@ -249,7 +255,7 @@ export default function FinanceiroPage() {
         status: f.status === "concluida" ? "Concluída" : f.status === "confirmada" ? "Confirmada" : "Planejamento",
       }));
 
-      await gerarPDFFestas(mesAtual, anoAtual, festasDados);
+      await gerarPDFFestas(mesAtual, anoAtual, festasDados, pdfBranding);
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
       alert("Erro ao gerar PDF. Tente novamente.");
@@ -310,11 +316,12 @@ export default function FinanceiroPage() {
     setGerandoPDF(true);
     try {
       await gerarPDFFiscal(
-        mesAtual, 
-        anoAtual, 
+        mesAtual,
+        anoAtual,
         despesasGerais,
         despesasPorMetodo,
-        despesasPorCategoria
+        despesasPorCategoria,
+        pdfBranding
       );
     } catch (error) {
       console.error("Erro ao gerar PDF fiscal:", error);

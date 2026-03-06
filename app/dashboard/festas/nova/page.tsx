@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Save } from "lucide-react";
@@ -25,6 +26,7 @@ const steps = [
 export default function NovaFestaPage() {
   const router = useRouter();
   const supabase = createClient();
+  const { empresaId } = useEmpresa();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -140,11 +142,14 @@ export default function NovaFestaPage() {
         }
       }
 
+      if (!empresaId) throw new Error("Empresa não selecionada");
+
       // 1. Criar a festa
       const { data: festa, error: festaError } = await supabase
         .from("festas")
         .insert([
           {
+            empresa_id: empresaId,
             titulo: formData.titulo,
             data: formData.data,
             horario: formData.horario || null,
@@ -180,6 +185,7 @@ export default function NovaFestaPage() {
         const { data: valoresFuncoes, error: valoresError } = await supabase
           .from("valores_funcoes")
           .select("funcao, valor")
+          .eq("empresa_id", empresaId)
           .in("funcao", funcoes);
 
         if (valoresError) throw valoresError;
@@ -217,6 +223,7 @@ export default function NovaFestaPage() {
         .from("orcamentos")
         .insert([
           {
+            empresa_id: empresaId,
             festa_id: festa.id,
             itens: formData.orcamento.itens,
             desconto: formData.orcamento.desconto,
@@ -245,6 +252,7 @@ export default function NovaFestaPage() {
           dataVencimento.setMonth(dataVencimento.getMonth() + i - 1);
           
           parcelas.push({
+            empresa_id: empresaId,
             orcamento_id: orcamentoData.id,
             festa_id: festa.id,
             numero_parcela: i,
@@ -267,6 +275,7 @@ export default function NovaFestaPage() {
       // 4. Criar checklist
       if (formData.checklist.length > 0) {
         const checklistInserts = formData.checklist.map((tarefa, index) => ({
+          empresa_id: empresaId,
           festa_id: festa.id,
           tarefa,
           concluido: false,

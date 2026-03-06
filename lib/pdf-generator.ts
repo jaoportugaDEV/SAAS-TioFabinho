@@ -2,45 +2,50 @@ import jsPDF from "jspdf";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { DespesaGeral, MetodoPagamentoDespesa, CategoriaDespesa } from "@/types";
 
-// Cor principal da empresa (vermelho)
-const PRIMARY_COLOR = "#FF0000";
-const PRIMARY_RGB = [255, 0, 0];
+export type PDFBranding = {
+  nome: string;
+  cidade?: string | null;
+  estado?: string | null;
+  cor_primaria?: string;
+};
 
-// Helper para adicionar cabeçalho
-function addHeader(doc: jsPDF, title: string) {
+const DEFAULT_RGB = [220, 38, 38]; // #DC2626
+const PRIMARY_RGB = DEFAULT_RGB;
+
+function hexToRgb(hex: string): [number, number, number] {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result
+    ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)]
+    : DEFAULT_RGB;
+}
+
+function addHeader(doc: jsPDF, title: string, branding?: PDFBranding | null) {
   const pageWidth = doc.internal.pageSize.getWidth();
-  
-  // Fundo vermelho
-  doc.setFillColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
+  const nome = branding?.nome?.toUpperCase() || "BUFFET";
+  const rgb = branding?.cor_primaria ? hexToRgb(branding.cor_primaria) : DEFAULT_RGB;
+
+  doc.setFillColor(rgb[0], rgb[1], rgb[2]);
   doc.rect(0, 0, pageWidth, 35, "F");
-  
-  // Texto branco
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text("TIO FABINHO BUFFET", pageWidth / 2, 15, { align: "center" });
-  
+  doc.text(nome, pageWidth / 2, 15, { align: "center" });
   doc.setFontSize(12);
   doc.setFont("helvetica", "normal");
   doc.text(title, pageWidth / 2, 25, { align: "center" });
-  
-  // Resetar cor para preto
   doc.setTextColor(0, 0, 0);
 }
 
-// Helper para adicionar rodapé
-function addFooter(doc: jsPDF) {
+function addFooter(doc: jsPDF, branding?: PDFBranding | null) {
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  
+  const texto = branding?.nome
+    ? [branding.nome, branding.cidade, branding.estado].filter(Boolean).join(" - ")
+    : "Gestão de Festas";
+
   doc.setFontSize(8);
   doc.setTextColor(128, 128, 128);
-  doc.text(
-    "Tio Fabinho Buffet - Presidente Prudente, SP",
-    pageWidth / 2,
-    pageHeight - 10,
-    { align: "center" }
-  );
+  doc.text(texto, pageWidth / 2, pageHeight - 10, { align: "center" });
 }
 
 // Helper para adicionar info do período
@@ -70,11 +75,11 @@ export async function gerarPDFDespesas(
   mes: number,
   ano: number,
   despesasFreelancers: { nome: string; valor: number; data: string; festa: string }[],
-  despesasGerais: DespesaGeral[]
+  despesasGerais: DespesaGeral[],
+  branding?: PDFBranding | null
 ) {
   const doc = new jsPDF();
-  
-  addHeader(doc, "Relatório de Despesas");
+  addHeader(doc, "Relatório de Despesas", branding);
   
   let yPosition = 45;
   yPosition = addPeriodInfo(doc, mes, ano, yPosition);
@@ -192,9 +197,7 @@ export async function gerarPDFDespesas(
   doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
   doc.text("TOTAL DE DESPESAS:", margin, yPosition);
   doc.text(formatCurrency(totalGeral), pageWidth - margin, yPosition, { align: "right" });
-  
-  addFooter(doc);
-  
+  addFooter(doc, branding);
   const meses = [
     "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -207,11 +210,11 @@ export async function gerarPDFDespesas(
 export async function gerarPDFFestas(
   mes: number,
   ano: number,
-  festas: { titulo: string; data: string; cliente: string; valor: number; status: string }[]
+  festas: { titulo: string; data: string; cliente: string; valor: number; status: string }[],
+  branding?: PDFBranding | null
 ) {
   const doc = new jsPDF();
-  
-  addHeader(doc, "Relatório de Festas");
+  addHeader(doc, "Relatório de Festas", branding);
   
   let yPosition = 45;
   yPosition = addPeriodInfo(doc, mes, ano, yPosition);
@@ -284,9 +287,7 @@ export async function gerarPDFFestas(
     doc.text("FATURAMENTO TOTAL:", margin, yPosition);
     doc.text(formatCurrency(totalFaturamento), pageWidth - margin, yPosition, { align: "right" });
   }
-  
-  addFooter(doc);
-  
+  addFooter(doc, branding);
   const meses = [
     "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -398,9 +399,7 @@ export async function gerarPDFFreelancers(
     doc.text("TOTAL DE PAGAMENTOS:", margin, yPosition);
     doc.text(formatCurrency(totalGeral), pageWidth - margin, yPosition, { align: "right" });
   }
-  
-  addFooter(doc);
-  
+  addFooter(doc, branding);
   const meses = [
     "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -663,9 +662,7 @@ export async function gerarPDFFiscal(
   doc.setFont("helvetica", "bold");
   doc.setTextColor(PRIMARY_RGB[0], PRIMARY_RGB[1], PRIMARY_RGB[2]);
   doc.text(formatCurrency(despesasPorMetodo.cartao_empresa), pageWidth - margin, yPosition, { align: "right" });
-  
-  addFooter(doc);
-  
+  addFooter(doc, branding);
   const meses = [
     "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"

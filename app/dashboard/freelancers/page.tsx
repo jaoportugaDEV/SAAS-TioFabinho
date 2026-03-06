@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Freelancer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ const funcaoCores: Record<string, string> = {
 };
 
 export default function FreelancersPage() {
+  const { empresaId } = useEmpresa();
   const [freelancers, setFreelancers] = useState<Freelancer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -39,13 +41,15 @@ export default function FreelancersPage() {
 
   useEffect(() => {
     loadFreelancers();
-  }, []);
+  }, [empresaId]);
 
   const loadFreelancers = async () => {
+    if (!empresaId) return;
     try {
       const { data, error } = await supabase
         .from("freelancers")
         .select("*")
+        .eq("empresa_id", empresaId)
         .order("nome");
 
       if (error) throw error;
@@ -59,12 +63,14 @@ export default function FreelancersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Tem certeza que deseja excluir este freelancer?")) return;
+    if (!empresaId) return;
 
     try {
       const { error } = await supabase
         .from("freelancers")
         .delete()
-        .eq("id", id);
+        .eq("id", id)
+        .eq("empresa_id", empresaId);
 
       if (error) throw error;
       

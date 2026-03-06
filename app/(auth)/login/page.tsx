@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { afterLoginSetEmpresa } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,7 +35,8 @@ export default function LoginPage() {
       }
 
       if (data.session) {
-        router.push("/dashboard");
+        const { redirectTo } = await afterLoginSetEmpresa();
+        router.push(redirectTo);
         router.refresh();
       }
     } catch (err) {
@@ -51,7 +53,7 @@ export default function LoginPage() {
           <div className="mx-auto w-32 h-32 relative mb-4">
             <Image
               src="/LogoFabinho.png"
-              alt="Tio Fabinho Buffet"
+              alt="Gestão de Festas"
               width={128}
               height={128}
               className="object-contain"
@@ -59,10 +61,10 @@ export default function LoginPage() {
             />
           </div>
           <CardTitle className="text-3xl font-bold text-primary">
-            Tio Fabinho Buffet
+            Gestão de Festas
           </CardTitle>
           <CardDescription className="text-base">
-            Sistema de Gestão de Festas
+            Entre com sua conta para acessar o sistema
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useEmpresa } from "@/lib/empresa-context";
 import {
   LayoutDashboard,
   Calendar,
@@ -19,6 +20,7 @@ import {
   Settings,
   X,
   BarChart3,
+  Building2,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -63,6 +65,11 @@ const menuItems = [
     icon: BarChart3,
   },
   {
+    title: "Por unidade",
+    href: "/dashboard/por-unidade",
+    icon: Building2,
+  },
+  {
     title: "Pagamentos",
     href: "/dashboard/pagamentos",
     icon: Wallet,
@@ -86,10 +93,12 @@ const menuItems = [
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { empresa } = useEmpresa();
+  const logoUrl = empresa?.logo_url || "/LogoFabinho.png";
+  const nomeExibicao = empresa?.nome || "Buffet";
 
   return (
     <>
-      {/* Overlay mobile */}
       {open && (
         <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
@@ -97,28 +106,27 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transition-transform duration-300 lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 relative">
               <Image
-                src="/LogoFabinho.png"
-                alt="Tio Fabinho Buffet"
+                src={logoUrl.startsWith("http") ? logoUrl : logoUrl}
+                alt={empresa?.nome || "Buffet"}
                 width={40}
                 height={40}
                 className="object-contain"
+                unoptimized={logoUrl.startsWith("http")}
               />
             </div>
             <div>
-              <h2 className="font-bold text-gray-900">Tio Fabinho</h2>
-              <p className="text-xs text-primary font-medium">Buffet</p>
+              <h2 className="font-bold text-gray-900 truncate max-w-[140px]" title={nomeExibicao}>{nomeExibicao}</h2>
+              <p className="text-xs text-primary font-medium">Gestão de Festas</p>
             </div>
           </div>
           <button

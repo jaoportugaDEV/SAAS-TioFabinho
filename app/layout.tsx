@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Tio Fabinho Buffet - Gestão de Festas",
+  title: "Gestão de Festas",
   description: "Sistema de gestão completo para festas e eventos",
 };
 

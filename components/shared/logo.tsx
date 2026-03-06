@@ -1,12 +1,17 @@
+"use client";
+
 import Image from "next/image";
+import { useEmpresa } from "@/lib/empresa-context";
 
 export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const { empresa } = useEmpresa();
+  const logoUrl = empresa?.logo_url || "/LogoFabinho.png";
+  const alt = empresa?.nome || "Buffet";
   const sizes = {
     sm: "w-8 h-8",
     md: "w-12 h-12",
     lg: "w-20 h-20",
   };
-
   const pixelSizes = {
     sm: 32,
     md: 48,
@@ -16,18 +21,21 @@ export function Logo({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
   return (
     <div className={`${sizes[size]} relative`}>
       <Image
-        src="/LogoFabinho.png"
-        alt="Tio Fabinho Buffet"
+        src={logoUrl}
+        alt={alt}
         width={pixelSizes[size]}
         height={pixelSizes[size]}
         className="object-contain"
         priority
+        unoptimized={logoUrl.startsWith("http")}
       />
     </div>
   );
 }
 
 export function LogoWithText({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
+  const { empresa } = useEmpresa();
+  const nomeExibicao = empresa?.nome || "Buffet";
   const textSizes = {
     sm: "text-sm",
     md: "text-base",
@@ -39,9 +47,9 @@ export function LogoWithText({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
       <Logo size={size} />
       <div>
         <h2 className={`font-bold text-gray-900 leading-none ${textSizes[size]}`}>
-          Tio Fabinho
+          {nomeExibicao}
         </h2>
-        <p className="text-xs text-primary font-medium">Buffet</p>
+        <p className="text-xs text-primary font-medium">Gestão de Festas</p>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentEmpresaId } from "@/lib/server-empresa";
 import { revalidatePath } from "next/cache";
 import { DespesaGeral, CategoriaDespesa, MetodoPagamentoDespesa } from "@/types";
 
@@ -16,10 +17,13 @@ export async function criarDespesaGeral(
   observacoes?: string
 ) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
   const { data: despesa, error } = await supabase
     .from("despesas_gerais")
     .insert({
+      empresa_id: empresaId,
       descricao,
       valor,
       data,
@@ -44,13 +48,15 @@ export async function criarDespesaGeral(
 // Listar despesas gerais (com filtro opcional de mês)
 export async function listarDespesasGerais(mes?: string, ano?: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada", data: [] };
 
   let query = supabase
     .from("despesas_gerais")
     .select("*")
+    .eq("empresa_id", empresaId)
     .order("data", { ascending: false });
 
-  // Se mês e ano foram fornecidos, filtrar
   if (mes && ano) {
     const startDate = `${ano}-${mes.padStart(2, "0")}-01`;
     const lastDay = new Date(parseInt(ano), parseInt(mes), 0).getDate();
@@ -82,6 +88,8 @@ export async function atualizarDespesaGeral(
   observacoes?: string
 ) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
   const { data: despesa, error } = await supabase
     .from("despesas_gerais")
@@ -96,6 +104,7 @@ export async function atualizarDespesaGeral(
       observacoes,
     })
     .eq("id", id)
+    .eq("empresa_id", empresaId)
     .select()
     .single();
 
@@ -111,11 +120,14 @@ export async function atualizarDespesaGeral(
 // Excluir despesa geral
 export async function excluirDespesaGeral(id: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
   const { error } = await supabase
     .from("despesas_gerais")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("empresa_id", empresaId);
 
   if (error) {
     console.error("Erro ao excluir despesa geral:", error);
@@ -177,4 +189,3 @@ export async function getDespesasPorCategoria(mes: string, ano: string) {
 
   return { success: true, data: totaisPorCategoria };
 }
-

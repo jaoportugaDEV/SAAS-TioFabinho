@@ -1,8 +1,11 @@
+"use client";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { CollapsibleSection } from "@/components/ui/collapsible-section";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useEmpresa } from "@/lib/empresa-context";
 
 interface StepInfoBasicaProps {
   formData: any;
@@ -18,6 +21,8 @@ const faixasEtariasOpcoes = [
 ];
 
 export function StepInfoBasica({ formData, setFormData, errors = {} }: StepInfoBasicaProps) {
+  const { empresa } = useEmpresa();
+  const locaisOpcoes = empresa?.locais ?? [];
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold text-gray-900">Informações Básicas da Festa</h2>
@@ -128,15 +133,27 @@ export function StepInfoBasica({ formData, setFormData, errors = {} }: StepInfoB
 
         <div className="space-y-2">
           <Label htmlFor="local">Local</Label>
-          <Select
-            id="local"
-            value={formData.local}
-            onChange={(e) => setFormData({ ...formData, local: e.target.value })}
-          >
-            <option value="">Selecione o local</option>
-            <option value="TioFabinho Buffet un.1">TioFabinho Buffet un.1</option>
-            <option value="TioFabinho Buffet un.2">TioFabinho Buffet un.2</option>
-          </Select>
+          {locaisOpcoes.length > 0 ? (
+            <Select
+              id="local"
+              value={locaisOpcoes.includes(formData.local || "") ? formData.local : (formData.local ? "_outro_" : "")}
+              onChange={(e) => setFormData({ ...formData, local: e.target.value === "_outro_" ? "" : e.target.value })}
+            >
+              <option value="">Selecione o local</option>
+              {locaisOpcoes.map((loc) => (
+                <option key={loc} value={loc}>{loc}</option>
+              ))}
+              <option value="_outro_">Outro (especificar)</option>
+            </Select>
+          ) : null}
+          {(locaisOpcoes.length === 0 || !locaisOpcoes.includes(formData.local || "")) && (
+            <Input
+              id="local-outro"
+              value={formData.local || ""}
+              onChange={(e) => setFormData({ ...formData, local: e.target.value })}
+              placeholder="Ex: Salão de festas, Endereço..."
+            />
+          )}
         </div>
       </div>
 

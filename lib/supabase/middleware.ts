@@ -43,6 +43,30 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Admin: apenas o e-mail definido em ADMIN_EMAIL pode acessar /admin/*
+  const pathname = request.nextUrl.pathname
+  if (user && pathname.startsWith('/admin')) {
+    const adminEmail = process.env.ADMIN_EMAIL?.toLowerCase()
+    const userEmail = user.email?.toLowerCase()
+    if (!adminEmail || userEmail !== adminEmail) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+  }
+
+  // Multi-tenant: dashboard exige empresa selecionada (cookie current_empresa_id)
+  if (
+    user &&
+    pathname.startsWith('/dashboard') &&
+    !pathname.startsWith('/dashboard/configuracoes/empresa') &&
+    !request.cookies.get('current_empresa_id')?.value
+  ) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/selecionar-empresa'
+    return NextResponse.redirect(url)
+  }
+
   return supabaseResponse
 }
 

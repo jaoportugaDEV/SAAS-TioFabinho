@@ -2,43 +2,56 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, DollarSign, Save, AlertCircle } from "lucide-react";
-import { FUNCAO_LABELS, FUNCAO_COLORS } from "@/lib/constants";
+import Link from "next/link";
+import { Settings, DollarSign, Save, AlertCircle, Building2 } from "lucide-react";
+import { FUNCAO_LABELS, FUNCAO_COLORS, VALORES_PADRAO_POR_FUNCAO } from "@/lib/constants";
 import { FuncaoFreelancer } from "@/types";
 import { Badge } from "@/components/ui/badge";
 
 interface ValorFuncao {
-  id: string;
+  id?: string;
   funcao: FuncaoFreelancer;
   valor: number;
-  updated_at: string;
+  updated_at?: string;
 }
 
 export default function ConfiguracoesPage() {
+  const { empresaId } = useEmpresa();
   const [valores, setValores] = useState<ValorFuncao[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
-    loadValores();
-  }, []);
+    if (empresaId) loadValores();
+  }, [empresaId]);
 
   const loadValores = async () => {
+    if (!empresaId) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from("valores_funcoes")
         .select("*")
+        .eq("empresa_id", empresaId)
         .order("funcao", { ascending: true });
 
       if (error) throw error;
-      
-      setValores(data || []);
+
+      // Sempre exibir as mesmas funções em todas as empresas: mesclar DB com padrões
+      const padroes = Object.entries(VALORES_PADRAO_POR_FUNCAO) as [FuncaoFreelancer, number][];
+      const merged: ValorFuncao[] = padroes.map(([funcao, valorPadrao]) => {
+        const existente = (data || []).find((r: ValorFuncao) => r.funcao === funcao);
+        return existente
+          ? { id: existente.id, funcao, valor: existente.valor, updated_at: existente.updated_at }
+          : { funcao, valor: valorPadrao, updated_at: undefined };
+      });
+      setValores(merged);
     } catch (error) {
       console.error("Erro ao carregar valores:", error);
       alert("Erro ao carregar configurações. Tente novamente.");
@@ -56,21 +69,32 @@ export default function ConfiguracoesPage() {
   const handleSalvar = async () => {
     setSaving(true);
     try {
-      // Atualizar cada valor
+      if (!empresaId) return;
       for (const valor of valores) {
-        const { error } = await supabase
-          .from("valores_funcoes")
-          .update({ 
-            valor: valor.valor,
-            updated_at: new Date().toISOString()
-          })
-          .eq("funcao", valor.funcao);
-
-        if (error) throw error;
+        if (valor.id) {
+          const { error } = await supabase
+            .from("valores_funcoes")
+            .update({
+              valor: valor.valor,
+              updated_at: new Date().toISOString()
+            })
+            .eq("empresa_id", empresaId)
+            .eq("funcao", valor.funcao);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("valores_funcoes")
+            .insert({
+              empresa_id: empresaId,
+              funcao: valor.funcao,
+              valor: valor.valor,
+            });
+          if (error) throw error;
+        }
       }
 
       alert("✅ Valores salvos com sucesso!");
-      await loadValores(); // Recarregar para pegar o updated_at atualizado
+      await loadValores();
     } catch (error) {
       console.error("Erro ao salvar valores:", error);
       alert("Erro ao salvar configurações. Tente novamente.");
@@ -102,6 +126,19 @@ export default function ConfiguracoesPage() {
           Gerencie os valores padrão por função dos freelancers
         </p>
       </div>
+
+      {/* Link para Dados da Empresa */}
+      <Link href="/dashboard/configuracoes/empresa">
+        <Card className="hover:border-primary transition-colors cursor-pointer">
+          <CardContent className="flex items-center gap-4 py-4">
+            <Building2 className="w-10 h-10 text-primary" />
+            <div>
+              <p className="font-semibold text-gray-900">Dados da empresa</p>
+              <p className="text-sm text-gray-500">Nome, logo, dados jurídicos e locais de festa</p>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* Card de Valores */}
       <Card>

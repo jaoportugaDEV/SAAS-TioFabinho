@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentEmpresaId } from "@/lib/server-empresa";
 import { StatusFesta } from "@/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -8,11 +9,14 @@ import { redirect } from "next/navigation";
 // Atualizar status da festa
 export async function updateFestaStatus(festaId: string, status: StatusFesta) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
   const { error } = await supabase
     .from("festas")
     .update({ status })
-    .eq("id", festaId);
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId);
 
   if (error) {
     console.error("Erro ao atualizar status:", error);
@@ -27,12 +31,14 @@ export async function updateFestaStatus(festaId: string, status: StatusFesta) {
 // Adicionar item à checklist
 export async function addChecklistItem(festaId: string, tarefa: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // Buscar a ordem do último item
   const { data: lastItem } = await supabase
     .from("checklist")
     .select("ordem")
     .eq("festa_id", festaId)
+    .eq("empresa_id", empresaId)
     .order("ordem", { ascending: false })
     .limit(1)
     .single();
@@ -43,6 +49,7 @@ export async function addChecklistItem(festaId: string, tarefa: string) {
     .from("checklist")
     .insert({
       festa_id: festaId,
+      empresa_id: empresaId,
       tarefa,
       concluido: false,
       ordem: novaOrdem,
@@ -60,11 +67,14 @@ export async function addChecklistItem(festaId: string, tarefa: string) {
 // Atualizar status de conclusão de um item da checklist
 export async function updateChecklistItem(itemId: string, concluido: boolean, festaId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
   const { error } = await supabase
     .from("checklist")
     .update({ concluido })
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("empresa_id", empresaId);
 
   if (error) {
     console.error("Erro ao atualizar item:", error);
@@ -78,11 +88,14 @@ export async function updateChecklistItem(itemId: string, concluido: boolean, fe
 // Excluir item da checklist
 export async function deleteChecklistItem(itemId: string, festaId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
   const { error } = await supabase
     .from("checklist")
     .delete()
-    .eq("id", itemId);
+    .eq("id", itemId)
+    .eq("empresa_id", empresaId);
 
   if (error) {
     console.error("Erro ao excluir item:", error);
@@ -96,12 +109,14 @@ export async function deleteChecklistItem(itemId: string, festaId: string) {
 // Adicionar freelancer à festa
 export async function addFreelancerToFesta(festaId: string, freelancerId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // Buscar a função e bonificação fixa do freelancer
   const { data: freelancer, error: freelancerError } = await supabase
     .from("freelancers")
     .select("funcao, bonus_fixo")
     .eq("id", freelancerId)
+    .eq("empresa_id", empresaId)
     .single();
 
   if (freelancerError) {
@@ -109,22 +124,19 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
     return { success: false, error: freelancerError.message };
   }
 
-  // Buscar o valor configurado para essa função
   const { data: valorFuncao, error: valorError } = await supabase
     .from("valores_funcoes")
     .select("valor")
     .eq("funcao", freelancer.funcao)
+    .eq("empresa_id", empresaId)
     .single();
 
   if (valorError) {
     console.error("Erro ao buscar valor da função:", valorError);
-    // Se não encontrar, usa 0 como fallback
   }
 
-  // Aplicar bonificação fixa se existir
   const bonusFixo = freelancer.bonus_fixo || 0;
 
-  // Inserir com o valor da função e bônus fixo
   const { data, error } = await supabase
     .from("festa_freelancers")
     .insert({
@@ -153,6 +165,21 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
 // Remover freelancer da festa
 export async function removeFreelancerFromFesta(festaId: string, freelancerId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
+
+  // festa_freelancers não tem empresa_id; segurança via RLS da festas pai
+  // Verificar que a festa pertence à empresa antes de remover
+  const { data: festa, error: festaError } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (festaError || !festa) {
+    return { success: false, error: "Festa não encontrada na empresa atual" };
+  }
 
   const { error } = await supabase
     .from("festa_freelancers")
@@ -176,6 +203,19 @@ export async function updateFreelancerConfirmacao(
   status: "pendente" | "confirmado"
 ) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
+
+  const { data: festa, error: festaError } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (festaError || !festa) {
+    return { success: false, error: "Festa não encontrada na empresa atual" };
+  }
 
   const { error } = await supabase
     .from("festa_freelancers")
@@ -195,11 +235,14 @@ export async function updateFreelancerConfirmacao(
 // Excluir festa permanentemente
 export async function deleteFesta(festaId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
   const { error } = await supabase
     .from("festas")
     .delete()
-    .eq("id", festaId);
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId);
 
   if (error) {
     console.error("Erro ao excluir festa:", error);
@@ -213,12 +256,14 @@ export async function deleteFesta(festaId: string) {
 // Sincronizar bonus_fixo de um freelancer em todas as festas pendentes
 export async function sincronizarBonusFixoFreelancer(freelancerId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // 1. Buscar o bonus_fixo atual do freelancer
   const { data: freelancer, error: freelancerError } = await supabase
     .from("freelancers")
     .select("bonus_fixo, nome")
     .eq("id", freelancerId)
+    .eq("empresa_id", empresaId)
     .single();
 
   if (freelancerError || !freelancer) {
@@ -228,30 +273,41 @@ export async function sincronizarBonusFixoFreelancer(freelancerId: string) {
 
   const bonusFixo = freelancer.bonus_fixo || 0;
 
-  // 2. Atualizar todas as festas pendentes desse freelancer
-  const { error: updateError } = await supabase
-    .from("festa_freelancers")
-    .update({
-      valor_bonus: bonusFixo,
-      motivo_bonus: bonusFixo > 0 ? "Bonificação fixa do freelancer" : null,
-    })
-    .eq("freelancer_id", freelancerId)
-    .eq("status_pagamento", "pendente");
+  // festa_freelancers não tem empresa_id: filtrar via join com festas da empresa
+  // A RLS garante que festa_freelancers retorna apenas os da empresa,
+  // mas para segurança extra filtramos pelas festas da empresa
+  const { data: festasEmpresa } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("empresa_id", empresaId);
 
-  if (updateError) {
-    console.error("Erro ao sincronizar bônus:", updateError);
-    return { success: false, error: updateError.message };
+  const festaIds = (festasEmpresa || []).map((f: any) => f.id);
+
+  if (festaIds.length > 0) {
+    const { error: updateError } = await supabase
+      .from("festa_freelancers")
+      .update({
+        valor_bonus: bonusFixo,
+        motivo_bonus: bonusFixo > 0 ? "Bonificação fixa do freelancer" : null,
+      })
+      .eq("freelancer_id", freelancerId)
+      .eq("status_pagamento", "pendente")
+      .in("festa_id", festaIds);
+
+    if (updateError) {
+      console.error("Erro ao sincronizar bônus:", updateError);
+      return { success: false, error: updateError.message };
+    }
   }
 
-  // 3. Revalidar páginas relevantes
   revalidatePath("/dashboard/pagamentos");
   revalidatePath("/dashboard/festas");
   revalidatePath("/dashboard/financeiro");
 
-  return { 
-    success: true, 
-    message: bonusFixo > 0 
-      ? `Bônus de R$ ${bonusFixo.toFixed(2)} aplicado em todos os pagamentos pendentes de ${freelancer.nome}` 
+  return {
+    success: true,
+    message: bonusFixo > 0
+      ? `Bônus de R$ ${bonusFixo.toFixed(2)} aplicado em todos os pagamentos pendentes de ${freelancer.nome}`
       : `Bônus removido de todos os pagamentos pendentes de ${freelancer.nome}`
   };
 }
@@ -259,8 +315,10 @@ export async function sincronizarBonusFixoFreelancer(freelancerId: string) {
 // Buscar festas futuras de um freelancer
 export async function getFestasFuturasFreelancer(freelancerId: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
-  // Buscar todas as festas onde o freelancer está escalado
+  // Buscar festas da empresa onde o freelancer está escalado
   const { data, error } = await supabase
     .from("festa_freelancers")
     .select(`
@@ -270,7 +328,8 @@ export async function getFestasFuturasFreelancer(freelancerId: string) {
         titulo,
         data,
         horario,
-        local
+        local,
+        empresa_id
       )
     `)
     .eq("freelancer_id", freelancerId);
@@ -280,12 +339,10 @@ export async function getFestasFuturasFreelancer(freelancerId: string) {
     return { success: false, error: error.message };
   }
 
-  // Mapear e ordenar as festas por data
   const festas = (data || [])
     .map((item: any) => item.festas)
-    .filter((festa: any) => festa !== null)
+    .filter((festa: any) => festa !== null && festa.empresa_id === empresaId)
     .sort((a: any, b: any) => {
-      // Ordenar por data e horário
       const dateA = new Date(`${a.data}T${a.horario || "00:00"}`);
       const dateB = new Date(`${b.data}T${b.horario || "00:00"}`);
       return dateA.getTime() - dateB.getTime();

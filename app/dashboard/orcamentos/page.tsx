@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Calculator } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 import { StatsCards } from "@/components/orcamentos/stats-cards";
 import { OrcamentosList } from "@/components/orcamentos/orcamentos-list";
 
@@ -37,6 +38,7 @@ interface OrcamentoComFesta {
 }
 
 export default function OrcamentosPage() {
+  const { empresaId } = useEmpresa();
   const [orcamentos, setOrcamentos] = useState<OrcamentoComFesta[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEncerradas, setShowEncerradas] = useState(false);
@@ -51,10 +53,13 @@ export default function OrcamentosPage() {
     try {
       setLoading(true);
 
+      if (!empresaId) return;
+
       // Buscar todos os orçamentos
       const { data: orcamentosData, error: orcamentosError } = await supabase
         .from("orcamentos")
         .select("*")
+        .eq("empresa_id", empresaId)
         .order("created_at", { ascending: false });
 
       if (orcamentosError) throw orcamentosError;
@@ -264,6 +269,7 @@ export default function OrcamentosPage() {
         showEncerradas={showEncerradas}
         onToggleEncerradas={setShowEncerradas}
         quantidadeEncerradas={quantidadeEncerradas}
+        onOrcamentoExcluido={loadOrcamentos}
       />
     </div>
   );

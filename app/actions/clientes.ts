@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentEmpresaId } from "@/lib/server-empresa";
 import { revalidatePath } from "next/cache";
 import { 
   validarIdentificadores, 
@@ -13,29 +14,30 @@ import {
 // Listar todos os clientes com estatísticas
 export async function getClientes() {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
   
-  // Buscar clientes
   const { data: clientes, error } = await supabase
     .from("clientes")
     .select("*")
+    .eq("empresa_id", empresaId)
     .order("nome");
   
   if (error) return { success: false, error: error.message };
   
-  // Para cada cliente, buscar estatísticas
   const clientesComStats = await Promise.all(
     (clientes || []).map(async (cliente) => {
-      // Contar festas
       const { count: totalFestas } = await supabase
         .from("festas")
         .select("*", { count: "exact", head: true })
-        .eq("cliente_id", cliente.id);
+        .eq("cliente_id", cliente.id)
+        .eq("empresa_id", empresaId);
       
-      // Buscar orçamentos e datas
       const { data: festas } = await supabase
         .from("festas")
         .select("id, data, orcamentos(total)")
         .eq("cliente_id", cliente.id)
+        .eq("empresa_id", empresaId)
         .order("data", { ascending: false });
       
       const valorTotal = festas?.reduce((acc, festa: any) => 
@@ -44,12 +46,12 @@ export async function getClientes() {
       
       const ultimaFesta = festas?.[0]?.data || null;
       
-      // Buscar próxima festa (futura)
       const hoje = new Date().toISOString().split('T')[0];
       const { data: proximaFesta } = await supabase
         .from("festas")
         .select("data")
         .eq("cliente_id", cliente.id)
+        .eq("empresa_id", empresaId)
         .gte("data", hoje)
         .order("data", { ascending: true })
         .limit(1)
@@ -71,6 +73,8 @@ export async function getClientes() {
 // Buscar cliente por ID com histórico completo
 export async function getClienteById(id: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
   
   const { data: cliente, error } = await supabase
     .from("clientes")
@@ -89,11 +93,11 @@ export async function getClienteById(id: string) {
       )
     `)
     .eq("id", id)
+    .eq("empresa_id", empresaId)
     .single();
   
   if (error) return { success: false, error: error.message };
   
-  // Ordenar festas por data (mais recente primeiro)
   if (cliente && cliente.festas) {
     cliente.festas.sort((a: any, b: any) => {
       return new Date(b.data).getTime() - new Date(a.data).getTime();
@@ -106,8 +110,9 @@ export async function getClienteById(id: string) {
 // Criar novo cliente
 export async function createCliente(data: any) {
   const supabase = await createClient();
-  
-  // Validar identificadores (pelo menos Email OU CPF/CNPJ)
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
+
   const validacao = validarIdentificadores({
     email: data.email,
     cpf_cnpj: data.cpf_cnpj,
@@ -117,15 +122,14 @@ export async function createCliente(data: any) {
     return { success: false, error: validacao.erro };
   }
 
-  // Processar e validar Email
   let emailNormalizado = null;
   if (data.email && data.email.trim()) {
     emailNormalizado = normalizarEmail(data.email);
     
-    // Verificar duplicação de Email
     const { data: existenteEmail } = await supabase
       .from('clientes')
       .select('id, nome')
+      .eq('empresa_id', empresaId)
       .eq('email', emailNormalizado)
       .single();
 
@@ -137,15 +141,14 @@ export async function createCliente(data: any) {
     }
   }
 
-  // Processar e validar CPF/CNPJ
   let cpfCnpjLimpo = null;
   if (data.cpf_cnpj && data.cpf_cnpj.trim()) {
     cpfCnpjLimpo = limparCpfCnpj(data.cpf_cnpj);
     
-    // Verificar duplicação de CPF/CNPJ
     const { data: existenteCpf } = await supabase
       .from('clientes')
       .select('id, nome')
+      .eq('empresa_id', empresaId)
       .eq('cpf_cnpj', cpfCnpjLimpo)
       .single();
 
@@ -162,6 +165,7 @@ export async function createCliente(data: any) {
   const { data: cliente, error } = await supabase
     .from("clientes")
     .insert([{
+      empresa_id: empresaId,
       nome: data.nome,
       email: emailNormalizado,
       telefone: data.telefone,
@@ -186,8 +190,9 @@ export async function createCliente(data: any) {
 // Atualizar cliente
 export async function updateCliente(id: string, data: any) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
   
-  // Processar e validar Email se fornecido
   let emailNormalizado = null;
   if (data.email && data.email.trim()) {
     const validacaoEmail = validarEmail(data.email);
@@ -197,10 +202,10 @@ export async function updateCliente(id: string, data: any) {
     
     emailNormalizado = normalizarEmail(data.email);
     
-    // Verificar se já existe outro cliente com este Email
     const { data: existenteEmail } = await supabase
       .from('clientes')
       .select('id, nome')
+      .eq('empresa_id', empresaId)
       .eq('email', emailNormalizado)
       .neq('id', id)
       .single();
@@ -213,7 +218,6 @@ export async function updateCliente(id: string, data: any) {
     }
   }
 
-  // Processar e validar CPF/CNPJ se fornecido
   let cpfCnpjLimpo = null;
   if (data.cpf_cnpj && data.cpf_cnpj.trim()) {
     const validacaoCpf = validarCpfCnpj(data.cpf_cnpj);
@@ -223,16 +227,16 @@ export async function updateCliente(id: string, data: any) {
     
     cpfCnpjLimpo = limparCpfCnpj(data.cpf_cnpj);
     
-    // Verificar se já existe outro cliente com este CPF/CNPJ
     const { data: existenteCpf } = await supabase
       .from('clientes')
       .select('id, nome')
+      .eq('empresa_id', empresaId)
       .eq('cpf_cnpj', cpfCnpjLimpo)
       .neq('id', id)
       .single();
 
     if (existenteCpf) {
-      const tipo = validacaoCpf.tipo || 'CPF/CNPJ';
+      const tipo = validarCpfCnpj(cpfCnpjLimpo).tipo || 'CPF/CNPJ';
       return {
         success: false,
         error: `${tipo} já cadastrado para: ${existenteCpf.nome}`
@@ -256,7 +260,8 @@ export async function updateCliente(id: string, data: any) {
       observacoes: data.observacoes || null,
       updated_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("empresa_id", empresaId);
   
   if (error) return { success: false, error: error.message };
   
@@ -268,11 +273,14 @@ export async function updateCliente(id: string, data: any) {
 // Desativar/Ativar cliente
 export async function toggleClienteStatus(id: string, ativo: boolean) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
   
   const { error } = await supabase
     .from("clientes")
     .update({ ativo, updated_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("empresa_id", empresaId);
   
   if (error) return { success: false, error: error.message };
   
@@ -284,12 +292,14 @@ export async function toggleClienteStatus(id: string, ativo: boolean) {
 // Excluir cliente
 export async function deleteCliente(id: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
   
-  // Verificar se tem festas vinculadas
   const { count } = await supabase
     .from("festas")
     .select("*", { count: "exact", head: true })
-    .eq("cliente_id", id);
+    .eq("cliente_id", id)
+    .eq("empresa_id", empresaId);
   
   if (count && count > 0) {
     return { 
@@ -301,7 +311,8 @@ export async function deleteCliente(id: string) {
   const { error } = await supabase
     .from("clientes")
     .delete()
-    .eq("id", id);
+    .eq("id", id)
+    .eq("empresa_id", empresaId);
   
   if (error) return { success: false, error: error.message };
   
@@ -312,12 +323,14 @@ export async function deleteCliente(id: string) {
 // Buscar clientes (para autocomplete)
 export async function searchClientes(query: string) {
   const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
   
   if (!query || query.trim() === "") {
-    // Se não há query, retornar os 10 clientes mais recentes
     const { data, error } = await supabase
       .from("clientes")
       .select("id, nome, telefone, email, cpf_cnpj")
+      .eq("empresa_id", empresaId)
       .eq("ativo", true)
       .order("created_at", { ascending: false })
       .limit(10);
@@ -326,17 +339,14 @@ export async function searchClientes(query: string) {
     return { success: true, data };
   }
   
-  // Preparar busca por CPF/CNPJ (se parece com números)
   const cpfCnpjLimpo = limparCpfCnpj(query);
   
   let orConditions = [`nome.ilike.%${query}%`, `telefone.ilike.%${query}%`];
   
-  // Se tem números suficientes, adicionar busca por CPF/CNPJ
   if (cpfCnpjLimpo.length >= 3) {
     orConditions.push(`cpf_cnpj.ilike.%${cpfCnpjLimpo}%`);
   }
   
-  // Adicionar busca por email
   if (query.includes('@')) {
     orConditions.push(`email.ilike.%${query}%`);
   }
@@ -344,6 +354,7 @@ export async function searchClientes(query: string) {
   const { data, error } = await supabase
     .from("clientes")
     .select("id, nome, telefone, email, cpf_cnpj")
+    .eq("empresa_id", empresaId)
     .eq("ativo", true)
     .or(orConditions.join(','))
     .order("nome")
@@ -363,15 +374,17 @@ export async function buscarOuCriarCliente(data: {
   observacoes?: string;
 }) {
   const supabase = await createClient();
-  
-  // 1. Buscar por CPF/CNPJ (prioridade 1)
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
+
   if (data.cpf_cnpj && data.cpf_cnpj.trim()) {
     const cpfCnpjLimpo = limparCpfCnpj(data.cpf_cnpj);
-    
+
     if (cpfCnpjLimpo) {
       const { data: clientePorCpf } = await supabase
         .from('clientes')
         .select('*')
+        .eq('empresa_id', empresaId)
         .eq('cpf_cnpj', cpfCnpjLimpo)
         .single();
 
@@ -381,13 +394,13 @@ export async function buscarOuCriarCliente(data: {
     }
   }
 
-  // 2. Buscar por Email (prioridade 2)
   if (data.email && data.email.trim()) {
     const emailNormalizado = normalizarEmail(data.email);
-    
+
     const { data: clientePorEmail } = await supabase
       .from('clientes')
       .select('*')
+      .eq('empresa_id', empresaId)
       .eq('email', emailNormalizado)
       .single();
 
@@ -396,15 +409,14 @@ export async function buscarOuCriarCliente(data: {
     }
   }
 
-  // 3. Buscar por telefone (fallback para clientes antigos)
   const { data: clientePorTelefone } = await supabase
     .from('clientes')
     .select('*')
+    .eq('empresa_id', empresaId)
     .eq('telefone', data.telefone)
     .single();
 
   if (clientePorTelefone) {
-    // Atualizar identificadores se fornecidos e ainda não existem
     const updates: any = {};
     
     if (!clientePorTelefone.email && data.email) {
@@ -420,9 +432,9 @@ export async function buscarOuCriarCliente(data: {
       await supabase
         .from('clientes')
         .update(updates)
-        .eq('id', clientePorTelefone.id);
+        .eq('id', clientePorTelefone.id)
+        .eq('empresa_id', empresaId);
       
-      // Retornar cliente atualizado
       const { data: clienteAtualizado } = await supabase
         .from('clientes')
         .select('*')
@@ -435,9 +447,8 @@ export async function buscarOuCriarCliente(data: {
     return { success: true, data: clientePorTelefone, criado: false };
   }
   
-  // 4. Criar novo cliente
-  // Preparar dados
   const dadosCliente: any = {
+    empresa_id: empresaId,
     nome: data.nome,
     telefone: data.telefone,
     observacoes: data.observacoes || null,

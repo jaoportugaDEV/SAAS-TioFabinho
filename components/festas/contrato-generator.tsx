@@ -8,6 +8,7 @@ import { FileText, Download } from "lucide-react";
 import jsPDF from "jspdf";
 import { formatDate } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
 
 interface ContratoGeneratorProps {
   festa: Festa;
@@ -15,9 +16,17 @@ interface ContratoGeneratorProps {
 }
 
 export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) {
+  const { empresa, empresaId } = useEmpresa();
   const [generating, setGenerating] = useState(false);
   const [parcelas, setParcelas] = useState<ParcelaPagamento[]>([]);
   const supabase = createClient();
+
+  const nomeEmpresa = empresa?.nome || "Buffet";
+  const cidadeEstado = [empresa?.cidade, empresa?.estado].filter(Boolean).join(" - ") || "Brasil";
+  const enderecoEmpresa = empresa?.endereco || "[Endereço Completo]";
+  const razaoSocial = empresa?.razao_social || empresa?.nome || "[Razão Social]";
+  const cnpjEmpresa = empresa?.cnpj || "[Preencher]";
+  const telefoneEmpresa = empresa?.telefone || "[Preencher]";
 
   // Carregar parcelas se existirem
   useEffect(() => {
@@ -72,7 +81,7 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
       <html lang="pt-BR">
       <head>
         <meta charset="UTF-8">
-        <title>Contrato ${numeroContrato} - Tio Fabinho Buffet</title>
+        <title>Contrato ${numeroContrato} - ${nomeEmpresa}</title>
         <style>
           body { font-family: Arial, sans-serif; line-height: 1.6; margin: 40px; color: #333; }
           h1 { color: #DC2626; text-align: center; margin-bottom: 5px; }
@@ -98,9 +107,9 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
         
         <h3>1. QUALIFICAÇÃO DAS PARTES</h3>
         <p><span class="destaque">CONTRATADO:</span></p>
-        <p>Razão Social: Tio Fabinho Buffet [Razão Social Completa]</p>
-        <p>CNPJ: [Preencher]</p>
-        <p>Endereço: [Endereço Completo] - Presidente Prudente - SP</p>
+        <p>Razão Social: ${razaoSocial}</p>
+        <p>CNPJ: ${cnpjEmpresa}</p>
+        <p>Endereço: ${enderecoEmpresa} - ${cidadeEstado}</p>
         
         <p><span class="destaque">CONTRATANTE:</span></p>
         <p>Nome: ${festa.cliente_nome}</p>
@@ -134,7 +143,7 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
           <p><strong>5.1. Das Obrigações do CONTRATADO:</strong> Fornecer todos os serviços conforme especificado, com equipe qualificada e materiais adequados.</p>
           <p><strong>5.2. Das Obrigações do CONTRATANTE:</strong> Efetuar pagamentos nas datas acordadas e fornecer informações corretas sobre o evento.</p>
           <p><strong>5.3. Do Cancelamento:</strong> Cancelamentos devem ser comunicados por escrito com antecedência mínima conforme política estabelecida.</p>
-          <p><strong>5.4. Das Disposições Gerais:</strong> Este contrato é regido pelas leis brasileiras, elegendo-se o Foro de Presidente Prudente - SP.</p>
+          <p><strong>5.4. Das Disposições Gerais:</strong> Este contrato é regido pelas leis brasileiras, elegendo-se o Foro de ${cidadeEstado}.</p>
         </div>
         
         <div class="assinaturas">
@@ -146,7 +155,7 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
           <div class="assinatura">
             <div class="linha"></div>
             <p><strong>CONTRATADO</strong></p>
-            <p>Tio Fabinho Buffet</p>
+            <p>${nomeEmpresa}</p>
           </div>
         </div>
       </body>
@@ -174,12 +183,8 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
         const footerY = pageHeight - 10;
         doc.setFontSize(8);
         doc.setTextColor(128, 128, 128);
-        doc.text(
-          `Tio Fabinho Buffet - Presidente Prudente, SP - WhatsApp: [Preencher] - E-mail: [Preencher]`,
-          pageWidth / 2,
-          footerY,
-          { align: "center" }
-        );
+        const footerTexto = `${nomeEmpresa} - ${cidadeEstado} - WhatsApp: ${telefoneEmpresa} - E-mail: [Preencher]`;
+        doc.text(footerTexto, pageWidth / 2, footerY, { align: "center" });
         // Número da página
         doc.text(`Pagina ${currentPage}`, pageWidth - margin, footerY, { align: "right" });
       };
@@ -245,9 +250,9 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
       yPosition = addSpace(yPosition, 5);
 
       yPosition = addText("CONTRATADO:", yPosition, 10, true);
-      yPosition = addText("Razao Social: Tio Fabinho Buffet [Razao Social Completa]", yPosition, 9);
-      yPosition = addText("CNPJ: [Preencher]", yPosition, 9);
-      yPosition = addText("Endereco: [Endereco Completo] - Presidente Prudente - SP", yPosition, 9);
+      yPosition = addText(`Razao Social: ${razaoSocial}`, yPosition, 9);
+      yPosition = addText(`CNPJ: ${cnpjEmpresa}`, yPosition, 9);
+      yPosition = addText(`Endereco: ${enderecoEmpresa} - ${cidadeEstado}`, yPosition, 9);
       yPosition = addText("Telefone/WhatsApp: [Preencher]", yPosition, 9);
       yPosition = addText("E-mail: [Preencher]", yPosition, 9);
       yPosition = addSpace(yPosition, 6);
@@ -550,7 +555,7 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
         yPosition = 30;
       }
 
-      yPosition = addText(`Presidente Prudente, SP, ${formatDate(new Date().toISOString())}`, yPosition, 10);
+      yPosition = addText(`${cidadeEstado}, ${formatDate(new Date().toISOString())}`, yPosition, 10);
       yPosition = addSpace(yPosition, 20);
 
       // Linha para assinatura do contratante (esquerda)
@@ -602,6 +607,7 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
         .from("contratos")
         .insert([
           {
+            empresa_id: empresaId,
             festa_id: festa.id,
             template_html: templateHTML,
             pdf_url: null,

@@ -4,6 +4,7 @@ import { Menu, LogOut, User } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { logout } from "@/app/actions/auth";
+import { useEmpresa } from "@/lib/empresa-context";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -11,21 +12,25 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick, userEmail }: HeaderProps) {
+  const { empresa } = useEmpresa();
+  const logoUrl = empresa?.logo_url || "/LogoFabinho.png";
+  const altLogo = empresa?.nome || "Buffet";
+
   const handleLogout = async () => {
     await logout();
   };
 
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
-      {/* Logo centralizada - visível apenas em telas maiores */}
       <div className="hidden lg:flex justify-center py-3 border-b border-gray-100">
         <div className="w-12 h-12 relative">
           <Image
-            src="/LogoFabinho.png"
-            alt="Tio Fabinho Buffet"
+            src={logoUrl}
+            alt={altLogo}
             width={48}
             height={48}
             className="object-contain"
+            unoptimized={logoUrl.startsWith("http")}
           />
         </div>
       </div>
@@ -44,15 +49,15 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
             </Button>
           </div>
 
-          {/* Logo centralizada - visível no mobile */}
           <div className="flex lg:hidden absolute left-1/2 transform -translate-x-1/2">
             <div className="w-10 h-10 relative">
               <Image
-                src="/LogoFabinho.png"
-                alt="Tio Fabinho Buffet"
+                src={logoUrl}
+                alt={altLogo}
                 width={40}
                 height={40}
                 className="object-contain"
+                unoptimized={logoUrl.startsWith("http")}
               />
             </div>
           </div>
