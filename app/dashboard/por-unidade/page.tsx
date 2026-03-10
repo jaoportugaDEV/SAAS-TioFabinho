@@ -135,6 +135,7 @@ export default function PorUnidadePage() {
                   <th className="text-right py-3 px-2 font-semibold text-gray-700">Festas</th>
                   <th className="text-right py-3 px-2 font-semibold text-gray-700">Receita</th>
                   <th className="text-right py-3 px-2 font-semibold text-gray-700">Desp. freel.</th>
+                  <th className="text-right py-3 px-2 font-semibold text-gray-700">Desp. gerais</th>
                   <th className="text-right py-3 px-2 font-semibold text-gray-700">Lucro</th>
                 </tr>
               </thead>
@@ -145,6 +146,7 @@ export default function PorUnidadePage() {
                     <td className="text-right py-3 px-2">{row.festas}</td>
                     <td className="text-right py-3 px-2 text-green-600">{formatCurrency(row.receita)}</td>
                     <td className="text-right py-3 px-2 text-orange-600">{formatCurrency(row.despesasFreelancers)}</td>
+                    <td className="text-right py-3 px-2 text-orange-600">{formatCurrency(row.despesasGerais)}</td>
                     <td className="text-right py-3 px-2 font-semibold text-primary">{formatCurrency(row.lucro)}</td>
                   </tr>
                 ))}
@@ -177,6 +179,12 @@ export default function PorUnidadePage() {
                       <TrendingDown className="w-4 h-4 text-orange-600" /> Desp. freel.
                     </span>
                     <span className="font-medium text-orange-600">{formatCurrency(row.despesasFreelancers)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600 flex items-center gap-1">
+                      <TrendingDown className="w-4 h-4 text-orange-600" /> Desp. gerais
+                    </span>
+                    <span className="font-medium text-orange-600">{formatCurrency(row.despesasGerais)}</span>
                   </div>
                   <div className="flex justify-between items-center pt-2 border-t">
                     <span className="text-gray-700 font-medium flex items-center gap-1">

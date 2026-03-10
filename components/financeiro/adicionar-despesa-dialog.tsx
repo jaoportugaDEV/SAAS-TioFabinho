@@ -12,15 +12,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { criarDespesaGeral } from "@/app/actions/despesas";
-import { CategoriaDespesa, MetodoPagamentoDespesa } from "@/types";
-import { ShoppingCart, Gift, Home, MoreHorizontal, CreditCard, Smartphone, Banknote, Wallet } from "lucide-react";
+import { CategoriaDespesa } from "@/types";
+import { ShoppingCart, Gift, Home, MoreHorizontal, CreditCard } from "lucide-react";
 
 interface AdicionarDespesaDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** Locais distintos das festas da empresa para associar a despesa a uma unidade (opcional) */
+  locais?: string[];
 }
 
 const categoriaOptions: { value: CategoriaDespesa; label: string; icon: any }[] = [
@@ -30,23 +31,17 @@ const categoriaOptions: { value: CategoriaDespesa; label: string; icon: any }[] 
   { value: "outros", label: "Outros", icon: MoreHorizontal },
 ];
 
-const metodoPagamentoOptions: { value: MetodoPagamentoDespesa; label: string; icon: any; destaque?: boolean }[] = [
-  { value: "cartao_empresa", label: "Cartão da Empresa", icon: CreditCard, destaque: true },
-  { value: "pix", label: "PIX", icon: Smartphone },
-  { value: "debito", label: "Débito", icon: CreditCard },
-  { value: "dinheiro", label: "Dinheiro", icon: Banknote },
-];
-
 export function AdicionarDespesaDialog({
   open,
   onOpenChange,
   onSuccess,
+  locais = [],
 }: AdicionarDespesaDialogProps) {
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [data, setData] = useState(new Date().toISOString().split("T")[0]);
   const [categoria, setCategoria] = useState<CategoriaDespesa>("mercado_cozinha");
-  const [metodoPagamento, setMetodoPagamento] = useState<MetodoPagamentoDespesa>("cartao_empresa");
+  const [local, setLocal] = useState("");
   const [fornecedor, setFornecedor] = useState("");
   const [salvando, setSalvando] = useState(false);
 
@@ -71,10 +66,11 @@ export function AdicionarDespesaDialog({
       valorNumerico,
       data,
       categoria,
-      metodoPagamento,
+      "cartao_empresa",
       fornecedor.trim() || undefined,
       undefined, // nota_fiscal
-      undefined  // observacoes
+      undefined, // observacoes
+      local.trim() || undefined  // local (unidade)
     );
 
     setSalvando(false);
@@ -84,7 +80,7 @@ export function AdicionarDespesaDialog({
       setValor("");
       setData(new Date().toISOString().split("T")[0]);
       setCategoria("mercado_cozinha");
-      setMetodoPagamento("cartao_empresa");
+      setLocal("");
       setFornecedor("");
       onSuccess();
       onOpenChange(false);
@@ -98,7 +94,7 @@ export function AdicionarDespesaDialog({
     setValor("");
     setData(new Date().toISOString().split("T")[0]);
     setCategoria("mercado_cozinha");
-    setMetodoPagamento("cartao_empresa");
+    setLocal("");
     setFornecedor("");
     onOpenChange(false);
   };
@@ -151,43 +147,53 @@ export function AdicionarDespesaDialog({
               </select>
             </div>
 
-            {/* Método de Pagamento */}
+            {/* Método de Pagamento — fixo: Cartão da Empresa */}
             <div className="space-y-2">
-              <Label htmlFor="metodo_pagamento" className="text-sm font-semibold">Método de Pagamento *</Label>
-              <select
-                id="metodo_pagamento"
-                value={metodoPagamento}
-                onChange={(e) => setMetodoPagamento(e.target.value as MetodoPagamentoDespesa)}
-                disabled={salvando}
-                required
-                className="w-full h-12 px-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              >
-                {metodoPagamentoOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label} {option.destaque ? "⭐" : ""}
-                  </option>
-                ))}
-              </select>
-              {metodoPagamento === "cartao_empresa" && (
-                <p className="text-xs text-primary font-medium mt-1">
-                  ⭐ Este valor será incluído no relatório fiscal
-                </p>
-              )}
+              <Label className="text-sm font-semibold">Método de Pagamento</Label>
+              <div className="flex items-center gap-2 h-12 px-3 text-base border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                <CreditCard className="w-5 h-5 text-primary" />
+                <span>Cartão da Empresa</span>
+              </div>
+              <p className="text-xs text-primary font-medium mt-1">
+                Todas as despesas são registradas como da empresa para o relatório fiscal.
+              </p>
             </div>
 
-            {/* Descrição */}
+            {/* Descrição — textarea tipo bloco de notas */}
             <div className="space-y-2">
               <Label htmlFor="descricao" className="text-sm font-semibold">Descrição da Despesa *</Label>
-              <Input
+              <textarea
                 id="descricao"
-                placeholder="Ex: Frutas e verduras, Copos descartáveis, etc."
+                placeholder="Ex: Frutas e verduras, copos descartáveis, compras extensas de mercado..."
                 value={descricao}
                 onChange={(e) => setDescricao(e.target.value)}
                 disabled={salvando}
                 required
-                className="text-base h-12"
+                rows={4}
+                className="w-full min-h-[120px] px-3 py-2 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary resize-y"
               />
             </div>
+
+            {/* Unidade (opcional) */}
+            {locais.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="local" className="text-sm font-semibold">
+                  Unidade <span className="text-gray-400 font-normal">(opcional)</span>
+                </Label>
+                <select
+                  id="local"
+                  value={local}
+                  onChange={(e) => setLocal(e.target.value)}
+                  disabled={salvando}
+                  className="w-full h-12 px-3 text-base border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  <option value="">Nenhuma</option>
+                  {locais.map((l) => (
+                    <option key={l} value={l}>{l}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Valor */}
             <div className="space-y-2">

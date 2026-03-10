@@ -9,6 +9,7 @@ import { Select } from "@/components/ui/select";
 import { DollarSign, TrendingUp, TrendingDown, Download, FileText, Plus, Trash2, CreditCard } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
 import { listarDespesasGerais, excluirDespesaGeral, getDespesasPorMetodo, getDespesasPorCategoria } from "@/app/actions/despesas";
+import { getLocaisDistintos } from "@/app/actions/por-unidade";
 import { AdicionarDespesaDialog } from "@/components/financeiro/adicionar-despesa-dialog";
 import { gerarPDFDespesas, gerarPDFFestas, gerarPDFFreelancers, gerarPDFFiscal } from "@/lib/pdf-generator";
 import { DespesaGeral, MetodoPagamentoDespesa, CategoriaDespesa } from "@/types";
@@ -62,6 +63,7 @@ export default function FinanceiroPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [gerandoPDF, setGerandoPDF] = useState(false);
+  const [locais, setLocais] = useState<string[]>([]);
   
   // Filtro de mês/ano
   const [mesAtual, setMesAtual] = useState(new Date().getMonth() + 1);
@@ -76,6 +78,13 @@ export default function FinanceiroPage() {
   useEffect(() => {
     loadStats();
   }, [mesAtual, anoAtual]);
+
+  useEffect(() => {
+    if (!empresa?.id) return;
+    getLocaisDistintos().then((res) => {
+      if (res.success) setLocais(res.data);
+    });
+  }, [empresa?.id]);
 
   const loadStats = async () => {
     try {
@@ -767,6 +776,7 @@ export default function FinanceiroPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onSuccess={loadStats}
+        locais={locais}
       />
     </div>
   );

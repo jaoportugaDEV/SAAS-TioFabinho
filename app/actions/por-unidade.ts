@@ -3,11 +3,38 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmpresaId } from "@/lib/server-empresa";
 
+/** Retorna lista de locais distintos das festas da empresa (para select de unidade em despesas). */
+export async function getLocaisDistintos(): Promise<{ success: true; data: string[] } | { success: false; error: string }> {
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("festas")
+    .select("local")
+    .eq("empresa_id", empresaId)
+    .not("local", "is", null);
+
+  if (error) {
+    console.error("Erro ao buscar locais:", error);
+    return { success: false, error: error.message };
+  }
+
+  const locaisSet = new Set<string>();
+  for (const row of data ?? []) {
+    const l = (row.local ?? "").trim();
+    if (l) locaisSet.add(l);
+  }
+  const locais = Array.from(locaisSet).sort((a, b) => a.localeCompare(b));
+  return { success: true, data: locais };
+}
+
 export type StatsPorLocal = {
   local: string;
   festas: number;
   receita: number;
   despesasFreelancers: number;
+  despesasGerais: number;
   lucro: number;
 };
 
@@ -93,6 +120,21 @@ export async function getStatsPorUnidade(
     }
   }
 
+  // Despesas gerais por local (despesas_gerais.local = nome do local)
+  const { data: despesasGeraisRows } = await supabase
+    .from("despesas_gerais")
+    .select("local, valor")
+    .eq("empresa_id", empresaId)
+    .gte("data", startDate)
+    .lte("data", endDate);
+
+  const despesasGeraisPorLocal = new Map<string, number>();
+  for (const d of despesasGeraisRows ?? []) {
+    const localKey = (d.local ?? "").trim() || "Outros";
+    const atual = despesasGeraisPorLocal.get(localKey) ?? 0;
+    despesasGeraisPorLocal.set(localKey, atual + Number(d.valor));
+  }
+
   const result: StatsPorLocal[] = [];
   for (const [local, ids] of festasPorLocal.entries()) {
     let receita = 0;
@@ -101,13 +143,29 @@ export async function getStatsPorUnidade(
       receita += orcamentosPorFesta.get(fid) ?? 0;
       despesasFreelancers += pagamentosPorFesta.get(fid) ?? 0;
     }
+    const despesasGerais = despesasGeraisPorLocal.get(local) ?? 0;
     result.push({
       local,
       festas: ids.length,
       receita,
       despesasFreelancers,
-      lucro: receita - despesasFreelancers,
+      despesasGerais,
+      lucro: receita - despesasFreelancers - despesasGerais,
     });
+  }
+
+  // Incluir locais que só têm despesas gerais (sem festas no período)
+  for (const [local, total] of despesasGeraisPorLocal.entries()) {
+    if (!festasPorLocal.has(local)) {
+      result.push({
+        local,
+        festas: 0,
+        receita: 0,
+        despesasFreelancers: 0,
+        despesasGerais: total,
+        lucro: -total,
+      });
+    }
   }
 
   return { success: true, data: result };

@@ -14,7 +14,8 @@ export async function criarDespesaGeral(
   metodo_pagamento: MetodoPagamentoDespesa,
   fornecedor?: string,
   nota_fiscal?: string,
-  observacoes?: string
+  observacoes?: string,
+  local?: string
 ) {
   const supabase = await createClient();
   const empresaId = await getCurrentEmpresaId();
@@ -32,6 +33,7 @@ export async function criarDespesaGeral(
       fornecedor,
       nota_fiscal,
       observacoes,
+      local: local || null,
     })
     .select()
     .single();
@@ -85,7 +87,8 @@ export async function atualizarDespesaGeral(
   metodo_pagamento: MetodoPagamentoDespesa,
   fornecedor?: string,
   nota_fiscal?: string,
-  observacoes?: string
+  observacoes?: string,
+  local?: string
 ) {
   const supabase = await createClient();
   const empresaId = await getCurrentEmpresaId();
@@ -102,6 +105,7 @@ export async function atualizarDespesaGeral(
       fornecedor,
       nota_fiscal,
       observacoes,
+      local: local ?? null,
     })
     .eq("id", id)
     .eq("empresa_id", empresaId)

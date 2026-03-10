@@ -210,6 +210,7 @@ export interface DespesaGeral {
   nota_fiscal?: string;
   fornecedor?: string;
   observacoes?: string;
+  local?: string;
   created_at: string;
 }
 
