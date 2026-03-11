@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import { afterLoginSetEmpresa } from "@/app/actions/auth";
+import { afterLoginSetEmpresa, checkLoginRateLimit } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +24,11 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      const { allowed } = await checkLoginRateLimit();
+      if (!allowed) {
+        setError("Muitas tentativas. Aguarde um minuto e tente novamente.");
+        return;
+      }
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,

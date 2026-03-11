@@ -7,11 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Search, Calendar, User, PenLine, Link2 } from "lucide-react";
+import { FileText, Download, Search, Calendar, User, PenLine, Link2, Trash2 } from "lucide-react";
 import { formatDate, whatsappLink } from "@/lib/utils";
-import { criarLinkAssinatura } from "@/app/actions/contratos";
+import { criarLinkAssinatura, getSignedUrlForContratoPdf, excluirContrato } from "@/app/actions/contratos";
 import Link from "next/link";
-import jsPDF from "jspdf";
+import { buildPDFContrato, type DadosContratoPDF } from "@/lib/pdf-contrato";
 import { AssinarContratoDialog } from "./assinar-contrato-dialog";
 import {
   Dialog,
@@ -40,6 +40,7 @@ interface ContratoComFesta {
     id: string;
     titulo: string;
     data: string;
+    cliente_id?: string | null;
     cliente_nome: string;
     cliente_contato?: string;
     status: string;
@@ -68,7 +69,28 @@ export function ContratosList() {
     contrato: null,
   });
   const [linkLoading, setLinkLoading] = useState(false);
+  const [contratoParaExcluir, setContratoParaExcluir] = useState<ContratoComFesta | null>(null);
+  const [excluindo, setExcluindo] = useState(false);
   const supabase = createClient();
+
+  const handleExcluirContrato = async () => {
+    if (!contratoParaExcluir) return;
+    setExcluindo(true);
+    try {
+      const result = await excluirContrato(contratoParaExcluir.id);
+      if (result.success) {
+        setContratoParaExcluir(null);
+        loadContratos();
+      } else {
+        alert(result.error);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao excluir contrato. Tente novamente.");
+    } finally {
+      setExcluindo(false);
+    }
+  };
 
   const handleEnviarParaCliente = async (contrato: ContratoComFesta) => {
     setLinkLoading(true);
@@ -128,7 +150,7 @@ export function ContratosList() {
       const festaIds = contratosData.map((c) => c.festa_id);
       const { data: festasData, error: festasError } = await supabase
         .from("festas")
-        .select("id, titulo, data, cliente_nome, cliente_contato, status, tema, local, horario")
+        .select("id, titulo, data, cliente_id, cliente_nome, cliente_contato, status, tema, local, horario")
         .eq("empresa_id", empresaId)
         .in("id", festaIds);
 
@@ -170,165 +192,53 @@ export function ContratosList() {
 
   const regeneratePDF = async (contrato: ContratoComFesta) => {
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 20;
-      const maxWidth = pageWidth - 2 * margin;
-      let yPosition = 20;
-
-      const numeroContrato = `CTR-${contrato.festa.id.substring(0, 8).toUpperCase()}`;
-
-      // Helper para adicionar texto centralizado
-      const addCenteredText = (text: string, y: number, fontSize = 12, isBold = false) => {
-        doc.setFontSize(fontSize);
-        if (isBold) doc.setFont("helvetica", "bold");
-        else doc.setFont("helvetica", "normal");
-        
-        const textWidth = doc.getTextWidth(text);
-        const x = (pageWidth - textWidth) / 2;
-        doc.text(text, x, y);
-      };
-
-      const addText = (text: string, y: number, fontSize = 11) => {
-        doc.setFontSize(fontSize);
-        doc.setFont("helvetica", "normal");
-        doc.text(text, margin, y, { maxWidth });
-        return y + (fontSize * 0.5);
-      };
-
-      // Cabeçalho
-      doc.setFillColor(255, 0, 0);
-      doc.rect(0, 0, pageWidth, 40, "F");
-      
-      doc.setTextColor(255, 255, 255);
-      addCenteredText((nomeEmpresa || "BUFFET").toUpperCase(), 15, 20, true);
-      addCenteredText("Contrato de Prestacao de Servicos", 25, 12);
-      
-      doc.setTextColor(0, 0, 0);
-      yPosition = 55;
-
-      addCenteredText("CONTRATO DE PRESTACAO DE SERVICOS", yPosition, 14, true);
-      yPosition += 15;
-
-      yPosition = addText(`Contrato No: ${numeroContrato}`, yPosition, 10);
-      yPosition = addText(`Data de Emissao: ${formatDate(contrato.created_at)}`, yPosition, 10);
-      yPosition += 10;
-
-      // CONTRATANTE
-      doc.setFont("helvetica", "bold");
-      yPosition = addText("CONTRATANTE:", yPosition, 12);
-      yPosition += 5;
-      
-      doc.setFont("helvetica", "normal");
-      yPosition = addText(`Nome: ${contrato.festa.cliente_nome}`, yPosition);
-      yPosition += 10;
-
-      // CONTRATADO
-      doc.setFont("helvetica", "bold");
-      yPosition = addText("CONTRATADO:", yPosition, 12);
-      yPosition += 5;
-      
-      doc.setFont("helvetica", "normal");
-      yPosition = addText("Nome: Tio Fabinho Buffet", yPosition);
-      yPosition = addText("Endereco: Presidente Prudente - SP", yPosition);
-      yPosition += 10;
-
-      // OBJETO DO CONTRATO
-      doc.setFont("helvetica", "bold");
-      yPosition = addText("OBJETO DO CONTRATO:", yPosition, 12);
-      yPosition += 5;
-      
-      doc.setFont("helvetica", "normal");
-      yPosition = addText(`Evento: ${contrato.festa.titulo}`, yPosition);
-      const dataTexto = contrato.festa.horario 
-        ? `Data do Evento: ${formatDate(contrato.festa.data)} as ${contrato.festa.horario}`
-        : `Data do Evento: ${formatDate(contrato.festa.data)}`;
-      yPosition = addText(dataTexto, yPosition);
-      if (contrato.festa.tema) {
-        yPosition = addText(`Tema: ${contrato.festa.tema}`, yPosition);
-      }
-      if (contrato.festa.local) {
-        yPosition = addText(`Local: ${contrato.festa.local}`, yPosition);
-      }
-      yPosition += 10;
-
-      // VALOR
-      if (contrato.orcamento) {
-        doc.setFont("helvetica", "bold");
-        yPosition = addText("VALOR DO CONTRATO:", yPosition, 12);
-        yPosition += 5;
-        
-        doc.setFont("helvetica", "normal");
-        const valorFormatado = Number(contrato.orcamento.total).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL",
-        });
-        yPosition = addText(`Valor Total: ${valorFormatado}`, yPosition);
-        yPosition += 10;
-      }
-
-      // CLÁUSULAS
-      doc.setFont("helvetica", "bold");
-      yPosition = addText("CLAUSULAS:", yPosition, 12);
-      yPosition += 5;
-
-      const clausulas = [
-        "1. O CONTRATADO se compromete a prestar os servicos de buffet conforme acordado.",
-        "2. O CONTRATANTE devera efetuar o pagamento nas datas estabelecidas.",
-        "3. Cancelamentos devem ser comunicados com no minimo 7 dias de antecedencia.",
-        "4. O CONTRATADO fornecera todos os materiais e equipe necessarios para o evento.",
-        "5. Alteracoes no contrato devem ser feitas por escrito e acordadas por ambas as partes.",
-      ];
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      
-      for (const clausula of clausulas) {
-        const lines = doc.splitTextToSize(clausula, maxWidth);
-        for (const line of lines) {
-          if (yPosition > 270) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          doc.text(line, margin, yPosition);
-          yPosition += 5;
+      let contratante: DadosContratoPDF["contratante"] = null;
+      if (contrato.festa.cliente_id && empresaId) {
+        const { data: cliente } = await supabase
+          .from("clientes")
+          .select("nome, cpf_cnpj, email, telefone, whatsapp, endereco, cidade, estado, cep")
+          .eq("id", contrato.festa.cliente_id)
+          .eq("empresa_id", empresaId)
+          .single();
+        if (cliente) {
+          contratante = {
+            nome: cliente.nome,
+            cpf_cnpj: cliente.cpf_cnpj ?? null,
+            email: cliente.email ?? null,
+            telefone: (cliente.telefone || cliente.whatsapp) ?? null,
+            endereco: cliente.endereco ?? null,
+            cidade: cliente.cidade ?? null,
+            estado: cliente.estado ?? null,
+            cep: cliente.cep ?? null,
+          };
         }
-        yPosition += 3;
       }
-
-      yPosition += 15;
-
-      // Assinaturas
-      if (yPosition > 240) {
-        doc.addPage();
-        yPosition = 20;
-      }
-
-      yPosition = addText(`${cidadeEstado || "Brasil"}, ${formatDate(contrato.created_at)}`, yPosition, 10);
-      yPosition += 20;
-
-      doc.line(margin, yPosition, margin + 70, yPosition);
-      yPosition += 5;
-      yPosition = addText("Assinatura do Contratante", yPosition, 9);
-      yPosition += 5;
-      yPosition = addText(contrato.festa.cliente_nome, yPosition, 9);
-
-      yPosition -= 10;
-      const xRightSignature = pageWidth - margin - 70;
-      doc.line(xRightSignature, yPosition, xRightSignature + 70, yPosition);
-      doc.text("Assinatura do Contratado", xRightSignature, yPosition + 5, { maxWidth: 70 });
-      doc.text("Tio Fabinho Buffet", xRightSignature, yPosition + 10, { maxWidth: 70 });
-
-      // Rodapé
-      doc.setFontSize(8);
-      doc.setTextColor(128, 128, 128);
-      doc.text(
-        cidadeEstado ? `${nomeEmpresa} - ${cidadeEstado}` : nomeEmpresa,
-        pageWidth / 2,
-        doc.internal.pageSize.getHeight() - 10,
-        { align: "center" }
-      );
-
+      const dados: DadosContratoPDF = {
+        festa: {
+          id: contrato.festa.id,
+          titulo: contrato.festa.titulo,
+          data: contrato.festa.data,
+          cliente_nome: contrato.festa.cliente_nome,
+          horario: contrato.festa.horario,
+          tema: contrato.festa.tema,
+          local: contrato.festa.local,
+        },
+        orcamento: contrato.orcamento ? { total: contrato.orcamento.total } : undefined,
+        contratante,
+        empresa: {
+          nome: nomeEmpresa,
+          razao_social: empresa?.razao_social ?? null,
+          cnpj: empresa?.cnpj ?? null,
+          endereco: empresa?.endereco ?? null,
+          cidade: empresa?.cidade ?? null,
+          estado: empresa?.estado ?? null,
+          telefone: empresa?.telefone ?? null,
+          email: undefined,
+        },
+        contrato: { created_at: contrato.created_at },
+      };
+      const { doc } = buildPDFContrato(dados);
+      const numeroContrato = `CTR-${contrato.festa.id.substring(0, 8).toUpperCase()}`;
       doc.save(`Contrato_${contrato.festa.titulo.replace(/\s+/g, "_")}_${numeroContrato}.pdf`);
     } catch (error) {
       console.error("Erro ao regenerar PDF:", error);
@@ -503,15 +413,19 @@ export function ContratosList() {
                       </>
                     )}
                     {contrato.pdf_assinado_url && (
-                      <a
-                        href={contrato.pdf_assinado_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="inline-flex h-9 items-center justify-center gap-2"
+                        onClick={async () => {
+                          const res = await getSignedUrlForContratoPdf(contrato.id);
+                          if (res.success) window.open(res.url, "_blank", "noopener,noreferrer");
+                          else alert(res.error);
+                        }}
                       >
                         <Download className="w-4 h-4" />
                         Baixar PDF Assinado
-                      </a>
+                      </Button>
                     )}
                     <Button
                       variant="outline"
@@ -526,6 +440,15 @@ export function ContratosList() {
                         Ver Festa
                       </Button>
                     </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      onClick={() => setContratoParaExcluir(contrato)}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Excluir
+                    </Button>
                   </div>
                 </div>
                 
@@ -546,6 +469,31 @@ export function ContratosList() {
         onOpenChange={(open) => !open && setContratoParaAssinar(null)}
         onSuccess={loadContratos}
       />
+
+      <Dialog open={!!contratoParaExcluir} onOpenChange={(open) => !open && setContratoParaExcluir(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="pr-10">
+            <DialogClose onClose={() => setContratoParaExcluir(null)} />
+            <DialogTitle>Excluir contrato</DialogTitle>
+            <p className="text-sm text-gray-600 mt-1">
+              Tem certeza que deseja excluir o contrato da festa &quot;{contratoParaExcluir?.festa.titulo}&quot;?
+              Esta ação não pode ser desfeita.
+            </p>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setContratoParaExcluir(null)} disabled={excluindo}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleExcluirContrato}
+              disabled={excluindo}
+            >
+              {excluindo ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={linkDialog.open} onOpenChange={(open) => !open && setLinkDialog((d) => ({ ...d, open: false }))}>
         <DialogContent className="max-w-md">

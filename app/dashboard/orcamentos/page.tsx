@@ -65,7 +65,7 @@ export default function OrcamentosPage() {
       const festaIds = orcamentosData.map((o) => o.festa_id);
       const { data: festasData } = await supabase
         .from("festas")
-        .select("id, titulo, data, cliente_nome, cliente_contato, status, tema, local, horario")
+        .select("id, titulo, data, cliente_id, cliente_nome, cliente_contato, status, tema, local, horario")
         .in("id", festaIds);
 
       const orcamentoIds = orcamentosData.map((o) => o.id);
@@ -121,10 +121,24 @@ export default function OrcamentosPage() {
       const festaIds = orcamentosData.map((o) => o.festa_id);
       const { data: festasData, error: festasError } = await supabase
         .from("festas")
-        .select("id, titulo, data, cliente_nome, cliente_contato, status, tema, local, horario")
+        .select("id, titulo, data, cliente_id, cliente_nome, cliente_contato, status, tema, local, horario")
         .in("id", festaIds);
 
       if (festasError) throw festasError;
+
+      // Buscar clientes das festas que têm cliente_id (para PDF com dados completos)
+      const clienteIds = [...new Set((festasData ?? []).map((f) => f.cliente_id).filter(Boolean))] as string[];
+      let clientesMap: Map<string, { nome: string; cpf_cnpj?: string | null; email?: string | null; telefone?: string | null; whatsapp?: string | null; endereco?: string | null; cidade?: string | null; estado?: string | null; cep?: string | null }> = new Map();
+      if (clienteIds.length > 0) {
+        const { data: clientesData } = await supabase
+          .from("clientes")
+          .select("id, nome, cpf_cnpj, email, telefone, whatsapp, endereco, cidade, estado, cep")
+          .eq("empresa_id", empresaId)
+          .in("id", clienteIds);
+        if (clientesData) {
+          clientesData.forEach((c) => clientesMap.set(c.id, c));
+        }
+      }
 
       // Buscar parcelas de todos os orçamentos
       const orcamentoIds = orcamentosData.map((o) => o.id);
@@ -138,7 +152,7 @@ export default function OrcamentosPage() {
       // Combinar dados
       const orcamentosCompletos = orcamentosData.map((orcamento) => {
         const festa = festasData?.find((f) => f.id === orcamento.festa_id);
-        
+        const cliente = festa?.cliente_id ? clientesMap.get(festa.cliente_id) : undefined;
         // Calcular valor pago real (incluindo parcelas)
         const parcelasOrcamento = parcelasData?.filter((p) => p.orcamento_id === orcamento.id) || [];
         const valorPagoParcelas = parcelasOrcamento
@@ -158,6 +172,7 @@ export default function OrcamentosPage() {
             tema: "",
             local: "",
           },
+          cliente,
         };
       });
 

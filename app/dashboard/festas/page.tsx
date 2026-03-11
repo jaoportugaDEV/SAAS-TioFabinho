@@ -152,7 +152,6 @@ export default function FestasPage() {
       // Toggle entre planejamento e confirmada
       const nextStatus = currentStatus === "planejamento" ? "confirmada" : "planejamento";
 
-      console.log("Alterando status de", currentStatus, "para", nextStatus);
 
       const { data, error } = await supabase
         .from("festas")
@@ -165,7 +164,6 @@ export default function FestasPage() {
         throw error;
       }
 
-      console.log("Status atualizado com sucesso:", data);
 
       // Atualiza o estado local
       setFestas(festas.map(f => 

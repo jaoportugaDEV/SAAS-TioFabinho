@@ -84,12 +84,9 @@ export function AssinarContratoDialog({
 
       if (uploadSigError) throw uploadSigError;
 
-      const { data: sigUrlData } = supabase.storage.from(bucket).getPublicUrl(pathAssinatura);
-      const assinaturaUrl = sigUrlData.publicUrl;
-
       const result = await registrarAssinaturaContratado(contrato.id, {
         assinado_por_nome: nome,
-        assinatura_url: assinaturaUrl,
+        assinatura_url: pathAssinatura,
       });
 
       if (!result.success) throw new Error(result.error);
@@ -100,7 +97,7 @@ export function AssinarContratoDialog({
       console.error(err);
       const msg =
         err && typeof err === "object" && "message" in err && String((err as { message: string }).message).toLowerCase().includes("bucket")
-          ? "Bucket de storage não encontrado. No Supabase, use Storage > New bucket com o nome: contratos_assinados (público) ou execute o script em supabase/scripts/criar-bucket-contratos.sql no SQL Editor."
+          ? "Bucket de storage não encontrado. No Supabase, crie o bucket contratos_assinados ou execute as migrations em supabase/migrations."
           : err instanceof Error
             ? err.message
             : "Erro ao assinar contrato. Tente novamente.";

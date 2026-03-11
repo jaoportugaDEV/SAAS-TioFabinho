@@ -1,6 +1,30 @@
 import jsPDF from "jspdf";
 import { formatDate, formatDateTime } from "@/lib/utils";
 
+/** Dados do contratante (cliente) para preencher o PDF. Quando ausente, usa apenas festa.cliente_nome. */
+export interface ContratantePDF {
+  nome: string;
+  cpf_cnpj?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  endereco?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+}
+
+/** Dados do contratado (empresa/buffet) para o PDF. */
+export interface ContratadoPDF {
+  nome: string;
+  razao_social?: string | null;
+  cnpj?: string | null;
+  endereco?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+}
+
 export interface DadosContratoPDF {
   festa: {
     id: string;
@@ -12,9 +36,14 @@ export interface DadosContratoPDF {
     local?: string;
   };
   orcamento?: { total: number };
-  empresa: { nome: string; cidade?: string | null; estado?: string | null };
+  /** Dados completos do contratante (cliente). Se omitido, usa apenas festa.cliente_nome no PDF. */
+  contratante?: ContratantePDF | null;
+  /** Dados completos do contratado (empresa). Deve incluir endereco, telefone etc. */
+  empresa: ContratadoPDF;
   contrato: { created_at: string };
 }
+
+const NAO_INFORMADO = "Nao informado";
 
 export interface OpcoesAssinatura {
   signatureBase64: string;
@@ -70,19 +99,40 @@ export function buildPDFContrato(
   yPosition = addText(`Data de Emissao: ${formatDate(dados.contrato.created_at)}`, yPosition, 10);
   yPosition += 10;
 
+  const contratanteNome = dados.contratante?.nome ?? dados.festa.cliente_nome;
+  const emp = dados.empresa;
+  const razaoOuNome = (emp.razao_social && emp.razao_social.trim()) ? emp.razao_social : (emp.nome || "Buffet");
+  const enderecoEmpresa = [emp.endereco, emp.cidade, emp.estado].filter(Boolean).join(" - ") || NAO_INFORMADO;
+  const telefoneEmpresa = (emp.telefone && emp.telefone.trim()) ? emp.telefone : NAO_INFORMADO;
+  const emailEmpresa = (emp.email && emp.email.trim()) ? emp.email : NAO_INFORMADO;
+
   doc.setFont("helvetica", "bold");
   yPosition = addText("CONTRATANTE:", yPosition, 12);
   yPosition += 5;
   doc.setFont("helvetica", "normal");
-  yPosition = addText(`Nome: ${dados.festa.cliente_nome}`, yPosition);
+  yPosition = addText(`Nome: ${contratanteNome}`, yPosition);
+  if (dados.contratante) {
+    const c = dados.contratante;
+    const cpfCnpj = (c.cpf_cnpj && c.cpf_cnpj.trim()) ? c.cpf_cnpj : NAO_INFORMADO;
+    const enderecoCliente = [c.endereco, c.cidade, c.estado, c.cep].filter(Boolean).join(", ") || NAO_INFORMADO;
+    const telCliente = (c.telefone && c.telefone.trim()) ? c.telefone : NAO_INFORMADO;
+    const emailCliente = (c.email && c.email.trim()) ? c.email : NAO_INFORMADO;
+    yPosition = addText(`CPF/CNPJ: ${cpfCnpj}`, yPosition);
+    yPosition = addText(`Endereco: ${enderecoCliente}`, yPosition);
+    yPosition = addText(`Telefone: ${telCliente}`, yPosition);
+    yPosition = addText(`E-mail: ${emailCliente}`, yPosition);
+  }
   yPosition += 10;
 
   doc.setFont("helvetica", "bold");
   yPosition = addText("CONTRATADO:", yPosition, 12);
   yPosition += 5;
   doc.setFont("helvetica", "normal");
-  yPosition = addText(`Nome: ${nomeEmpresa}`, yPosition);
-  yPosition = addText("Endereco: Presidente Prudente - SP", yPosition);
+  yPosition = addText(`Razao Social: ${razaoOuNome}`, yPosition);
+  yPosition = addText(`CNPJ: ${(emp.cnpj && emp.cnpj.trim()) ? emp.cnpj : NAO_INFORMADO}`, yPosition);
+  yPosition = addText(`Endereco: ${enderecoEmpresa}`, yPosition);
+  yPosition = addText(`Telefone/WhatsApp: ${telefoneEmpresa}`, yPosition);
+  yPosition = addText(`E-mail: ${emailEmpresa}`, yPosition);
   yPosition += 10;
 
   doc.setFont("helvetica", "bold");

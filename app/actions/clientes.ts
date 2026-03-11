@@ -10,6 +10,8 @@ import {
   validarCpfCnpj,
   validarEmail
 } from "@/lib/validators";
+import { escapeForPostgrestIlike, MSG_ERRO_GENERICO } from "@/lib/security";
+import { auditLog, getCorrelationId } from "@/lib/audit-log";
 
 // Listar todos os clientes com estatísticas
 export async function getClientes() {
@@ -23,7 +25,10 @@ export async function getClientes() {
     .eq("empresa_id", empresaId)
     .order("nome");
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] getClientes:", error.code);
+    return { success: false, error: MSG_ERRO_GENERICO };
+  }
   
   const clientesComStats = await Promise.all(
     (clientes || []).map(async (cliente) => {
@@ -96,7 +101,10 @@ export async function getClienteById(id: string) {
     .eq("empresa_id", empresaId)
     .single();
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] getClienteById:", error.code);
+    return { success: false, error: MSG_ERRO_GENERICO };
+  }
   
   if (cliente && cliente.festas) {
     cliente.festas.sort((a: any, b: any) => {
@@ -181,7 +189,10 @@ export async function createCliente(data: any) {
     .select()
     .single();
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] createCliente:", error.code);
+    return { success: false, error: MSG_ERRO_GENERICO };
+  }
   
   revalidatePath("/dashboard/clientes");
   return { success: true, data: cliente };
@@ -263,7 +274,10 @@ export async function updateCliente(id: string, data: any) {
     .eq("id", id)
     .eq("empresa_id", empresaId);
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] updateCliente:", error.code);
+    return { success: false, error: MSG_ERRO_GENERICO };
+  }
   
   revalidatePath("/dashboard/clientes");
   revalidatePath(`/dashboard/clientes/${id}`);
@@ -282,7 +296,10 @@ export async function toggleClienteStatus(id: string, ativo: boolean) {
     .eq("id", id)
     .eq("empresa_id", empresaId);
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] toggleClienteStatus:", error.code);
+    return { success: false, error: MSG_ERRO_GENERICO };
+  }
   
   revalidatePath("/dashboard/clientes");
   revalidatePath(`/dashboard/clientes/${id}`);
@@ -314,7 +331,21 @@ export async function deleteCliente(id: string) {
     .eq("id", id)
     .eq("empresa_id", empresaId);
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] deleteCliente:", error.code);
+    return { success: false, error: MSG_ERRO_GENERICO };
+  }
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  auditLog({
+    action: "cliente_delete",
+    userId: user?.id,
+    empresaId,
+    targetId: id,
+    correlationId: getCorrelationId(h),
+  });
   
   revalidatePath("/dashboard/clientes");
   return { success: true };
@@ -335,20 +366,24 @@ export async function searchClientes(query: string) {
       .order("created_at", { ascending: false })
       .limit(10);
     
-    if (error) return { success: false, error: error.message };
+    if (error) {
+      console.error("[clientes] searchClientes empty:", error.code);
+      return { success: false, error: "Falha na busca. Tente novamente." };
+    }
     return { success: true, data };
   }
   
   const cpfCnpjLimpo = limparCpfCnpj(query);
+  const safeQuery = escapeForPostgrestIlike(query);
   
-  let orConditions = [`nome.ilike.%${query}%`, `telefone.ilike.%${query}%`];
+  let orConditions = [`nome.ilike.%${safeQuery}%`, `telefone.ilike.%${safeQuery}%`];
   
   if (cpfCnpjLimpo.length >= 3) {
-    orConditions.push(`cpf_cnpj.ilike.%${cpfCnpjLimpo}%`);
+    orConditions.push(`cpf_cnpj.ilike.%${escapeForPostgrestIlike(cpfCnpjLimpo)}%`);
   }
   
   if (query.includes('@')) {
-    orConditions.push(`email.ilike.%${query}%`);
+    orConditions.push(`email.ilike.%${safeQuery}%`);
   }
   
   const { data, error } = await supabase
@@ -360,7 +395,10 @@ export async function searchClientes(query: string) {
     .order("nome")
     .limit(10);
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] searchClientes:", error.code);
+    return { success: false, error: "Falha na busca. Tente novamente." };
+  }
   
   return { success: true, data };
 }
@@ -468,7 +506,10 @@ export async function buscarOuCriarCliente(data: {
     .select()
     .single();
   
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    console.error("[clientes] buscarOuCriarCliente:", error.code);
+    return { success: false, error: MSG_ERRO_GENERICO };
+  }
   
   revalidatePath("/dashboard/clientes");
   return { success: true, data: novoCliente, criado: true };

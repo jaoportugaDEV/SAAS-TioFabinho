@@ -12,6 +12,18 @@ interface ItemOrcamento {
   valor_unitario: number;
 }
 
+interface ClienteResumo {
+  nome: string;
+  cpf_cnpj?: string | null;
+  email?: string | null;
+  telefone?: string | null;
+  whatsapp?: string | null;
+  endereco?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+}
+
 interface OrcamentoData {
   id: string;
   itens: ItemOrcamento[];
@@ -30,6 +42,8 @@ interface OrcamentoData {
     local?: string;
     horario?: string;
   };
+  /** Dados completos do cliente quando festa tem cliente_id (para PDF profissional). */
+  cliente?: ClienteResumo | null;
 }
 
 interface OrcamentoPDFGeneratorProps {
@@ -38,6 +52,8 @@ interface OrcamentoPDFGeneratorProps {
   size?: "default" | "sm" | "lg";
   className?: string;
 }
+
+const NAO_INFORMADO = "Nao informado";
 
 export function OrcamentoPDFGenerator({ 
   orcamento, 
@@ -48,8 +64,18 @@ export function OrcamentoPDFGenerator({
   const { empresa } = useEmpresa();
   const nomeEmpresa = empresa?.nome ?? "Buffet";
   const cidadeEstado = [empresa?.cidade, empresa?.estado].filter(Boolean).join(" - ");
+  const enderecoEmpresa = [empresa?.endereco, empresa?.cidade, empresa?.estado].filter(Boolean).join(" - ") || null;
+  const telefoneEmpresa = empresa?.telefone ?? null;
 
   const generatePDF = () => {
+    if (orcamento.cliente) {
+      const semCpf = !orcamento.cliente.cpf_cnpj?.trim();
+      const semEmail = !orcamento.cliente.email?.trim();
+      if (semCpf || semEmail) {
+        alert("Complete o cadastro do cliente (CPF/CNPJ e e-mail) antes de gerar o documento.");
+        return;
+      }
+    }
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -96,6 +122,18 @@ export function OrcamentoPDFGenerator({
       yPosition = addText(`Data de Emissao: ${formatDate(orcamento.created_at)}`, yPosition, 10);
       yPosition += 10;
 
+      // BUFFET / EMPRESA (dados completos no corpo do PDF)
+      if (enderecoEmpresa || telefoneEmpresa) {
+        doc.setFont("helvetica", "bold");
+        yPosition = addText("BUFFET:", yPosition, 12);
+        yPosition += 5;
+        doc.setFont("helvetica", "normal");
+        yPosition = addText(`${nomeEmpresa}${cidadeEstado ? ` - ${cidadeEstado}` : ""}`, yPosition, 10);
+        if (enderecoEmpresa) yPosition = addText(`Endereco: ${enderecoEmpresa}`, yPosition, 10);
+        if (telefoneEmpresa) yPosition = addText(`Telefone: ${telefoneEmpresa}`, yPosition, 10);
+        yPosition += 10;
+      }
+
       // CLIENTE
       doc.setFont("helvetica", "bold");
       yPosition = addText("CLIENTE:", yPosition, 12);
@@ -103,7 +141,19 @@ export function OrcamentoPDFGenerator({
       
       doc.setFont("helvetica", "normal");
       yPosition = addText(`Nome: ${orcamento.festa.cliente_nome}`, yPosition);
-      yPosition = addText(`Contato: ${orcamento.festa.cliente_contato}`, yPosition);
+      if (orcamento.cliente) {
+        const c = orcamento.cliente;
+        const tel = (c.telefone || c.whatsapp)?.trim() ? (c.telefone || c.whatsapp) : NAO_INFORMADO;
+        const email = (c.email && c.email.trim()) ? c.email : NAO_INFORMADO;
+        const cpfCnpj = (c.cpf_cnpj && c.cpf_cnpj.trim()) ? c.cpf_cnpj : NAO_INFORMADO;
+        const enderecoCliente = [c.endereco, c.cidade, c.estado, c.cep].filter(Boolean).join(", ") || NAO_INFORMADO;
+        yPosition = addText(`CPF/CNPJ: ${cpfCnpj}`, yPosition, 10);
+        yPosition = addText(`E-mail: ${email}`, yPosition, 10);
+        yPosition = addText(`Telefone: ${tel}`, yPosition, 10);
+        yPosition = addText(`Endereco: ${enderecoCliente}`, yPosition, 10);
+      } else {
+        yPosition = addText(`Contato: ${orcamento.festa.cliente_contato}`, yPosition, 10);
+      }
       yPosition += 10;
 
       // EVENTO
