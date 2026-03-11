@@ -13,9 +13,10 @@ import { useEmpresa } from "@/lib/empresa-context";
 interface ContratoGeneratorProps {
   festa: Festa;
   orcamento: Orcamento | null;
+  compact?: boolean;
 }
 
-export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) {
+export function ContratoGenerator({ festa, orcamento, compact = false }: ContratoGeneratorProps) {
   const { empresa, empresaId } = useEmpresa();
   const [generating, setGenerating] = useState(false);
   const [parcelas, setParcelas] = useState<ParcelaPagamento[]>([]);
@@ -626,6 +627,21 @@ export function ContratoGenerator({ festa, orcamento }: ContratoGeneratorProps) 
       setGenerating(false);
     }
   };
+
+  if (compact) {
+    return (
+      <Button
+        onClick={generatePDF}
+        disabled={generating}
+        variant="outline"
+        size="sm"
+        className="bg-blue-600 hover:bg-blue-700 text-white border-blue-600"
+      >
+        <Download className="w-4 h-4 mr-2" />
+        {generating ? "Gerando..." : "Gerar Contrato PDF"}
+      </Button>
+    );
+  }
 
   return (
     <Card>

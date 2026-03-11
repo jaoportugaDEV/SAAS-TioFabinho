@@ -21,6 +21,7 @@ interface OrcamentoComFesta {
   acrescimo: number;
   total: number;
   status_pagamento: string;
+  status_aceite?: string;
   observacoes?: string;
   created_at: string;
   valor_pago_parcelas?: number;
@@ -48,6 +49,53 @@ export default function OrcamentosPage() {
   useEffect(() => {
     loadOrcamentos();
   }, []);
+
+  // Reload silencioso: atualiza dados sem mostrar spinner (preserva scroll/foco)
+  const reloadSilencioso = async () => {
+    if (!empresaId) return;
+    try {
+      const { data: orcamentosData } = await supabase
+        .from("orcamentos")
+        .select("*")
+        .eq("empresa_id", empresaId)
+        .order("created_at", { ascending: false });
+      if (!orcamentosData) return;
+      if (orcamentosData.length === 0) { setOrcamentos([]); return; }
+
+      const festaIds = orcamentosData.map((o) => o.festa_id);
+      const { data: festasData } = await supabase
+        .from("festas")
+        .select("id, titulo, data, cliente_nome, cliente_contato, status, tema, local, horario")
+        .in("id", festaIds);
+
+      const orcamentoIds = orcamentosData.map((o) => o.id);
+      const { data: parcelasData } = await supabase
+        .from("parcelas_pagamento")
+        .select("orcamento_id, valor, status")
+        .in("orcamento_id", orcamentoIds);
+
+      const completos = orcamentosData.map((orcamento) => {
+        const festa = festasData?.find((f) => f.id === orcamento.festa_id);
+        const parcelasOrcamento = parcelasData?.filter((p) => p.orcamento_id === orcamento.id) || [];
+        const valorPagoParcelas = parcelasOrcamento
+          .filter((p) => p.status === "pago")
+          .reduce((acc, p) => acc + Number(p.valor), 0);
+        return {
+          ...orcamento,
+          valor_pago_parcelas: valorPagoParcelas,
+          festa: festa || { id: orcamento.festa_id, titulo: "Festa não encontrada", data: "", cliente_nome: "", cliente_contato: "", status: "planejamento", tema: "", local: "" },
+        };
+      });
+      completos.sort((a, b) => {
+        if (!a.festa.data) return 1;
+        if (!b.festa.data) return -1;
+        return new Date(a.festa.data).getTime() - new Date(b.festa.data).getTime();
+      });
+      setOrcamentos(completos);
+    } catch {
+      // ignora silenciosamente
+    }
+  };
 
   const loadOrcamentos = async () => {
     try {
@@ -150,9 +198,11 @@ export default function OrcamentosPage() {
     (o) => o.festa.status === "encerrada" || o.festa.status === "encerrada_pendente"
   ).length;
 
-  // Calcular estatísticas considerando parcelas pagas
+  // Calcular estatísticas considerando parcelas pagas (excluir orçamentos recusados)
   const stats = orcamentosFiltrados.reduce(
     (acc, orcamento) => {
+      if ((orcamento.status_aceite ?? "aguardando") === "recusado") return acc;
+
       const total = Number(orcamento.total);
       const valorPagoParcelas = Number(orcamento.valor_pago_parcelas || 0);
 
@@ -270,6 +320,7 @@ export default function OrcamentosPage() {
         onToggleEncerradas={setShowEncerradas}
         quantidadeEncerradas={quantidadeEncerradas}
         onOrcamentoExcluido={loadOrcamentos}
+        onOrcamentoAtualizado={reloadSilencioso}
       />
     </div>
   );

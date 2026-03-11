@@ -158,6 +158,14 @@ export default function EditarFestaPage() {
       if (!formData.cliente_contato.trim()) {
         newErrors.cliente_contato = "O contato do cliente é obrigatório";
       }
+    } else if (step === 4) {
+      if (
+        formData.orcamento.forma_pagamento === "parcelado" &&
+        (!formData.orcamento.quantidade_parcelas || formData.orcamento.quantidade_parcelas < 2)
+      ) {
+        newErrors.quantidade_parcelas =
+          "Informe a quantidade de parcelas para continuar.";
+      }
     }
 
     setErrors(newErrors);

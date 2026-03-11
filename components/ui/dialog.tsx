@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { X } from "lucide-react";
 
 interface DialogProps {
   open: boolean;
@@ -19,10 +20,23 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
         onClick={() => onOpenChange(false)}
       />
       {/* Dialog Content */}
-      <div className="relative z-50 w-full flex items-center justify-center min-h-full py-4">
+      <div className="relative z-50 w-full flex items-center justify-center min-h-full py-4 pointer-events-none">
         {children}
       </div>
     </div>
+  );
+}
+
+export function DialogClose({ onClose }: { onClose: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClose}
+      className="absolute top-4 right-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none"
+      aria-label="Fechar"
+    >
+      <X className="h-4 w-4" />
+    </button>
   );
 }
 
@@ -34,7 +48,7 @@ interface DialogContentProps {
 export function DialogContent({ children, className = "" }: DialogContentProps) {
   return (
     <div 
-      className={`bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto ${className}`}
+      className={`relative bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto pointer-events-auto ${className}`}
       onClick={(e) => e.stopPropagation()}
     >
       {children}

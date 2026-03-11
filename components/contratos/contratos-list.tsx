@@ -7,10 +7,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Download, Search, Calendar, User } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { FileText, Download, Search, Calendar, User, PenLine, Link2 } from "lucide-react";
+import { formatDate, whatsappLink } from "@/lib/utils";
+import { criarLinkAssinatura } from "@/app/actions/contratos";
 import Link from "next/link";
 import jsPDF from "jspdf";
+import { AssinarContratoDialog } from "./assinar-contrato-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogClose,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface ContratoComFesta {
   id: string;
@@ -19,11 +29,19 @@ interface ContratoComFesta {
   pdf_url: string | null;
   created_at: string;
   status?: string;
+  assinado_at?: string | null;
+  assinado_por_nome?: string | null;
+  assinatura_url?: string | null;
+  pdf_assinado_url?: string | null;
+  contratado_assinado_at?: string | null;
+  contratado_assinado_por_nome?: string | null;
+  contratado_assinatura_url?: string | null;
   festa: {
     id: string;
     titulo: string;
     data: string;
     cliente_nome: string;
+    cliente_contato?: string;
     status: string;
     tema: string;
     local: string;
@@ -43,7 +61,31 @@ export function ContratosList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [contratoParaAssinar, setContratoParaAssinar] = useState<ContratoComFesta | null>(null);
+  const [linkDialog, setLinkDialog] = useState<{ open: boolean; url: string | null; contrato: ContratoComFesta | null }>({
+    open: false,
+    url: null,
+    contrato: null,
+  });
+  const [linkLoading, setLinkLoading] = useState(false);
   const supabase = createClient();
+
+  const handleEnviarParaCliente = async (contrato: ContratoComFesta) => {
+    setLinkLoading(true);
+    try {
+      const result = await criarLinkAssinatura(contrato.id);
+      if (!result.success) {
+        alert(result.error);
+        return;
+      }
+      setLinkDialog({ open: true, url: result.url, contrato });
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao gerar link. Tente novamente.");
+    } finally {
+      setLinkLoading(false);
+    }
+  };
 
   useEffect(() => {
     loadContratos();
@@ -63,7 +105,14 @@ export function ContratosList() {
           template_html,
           pdf_url,
           created_at,
-          status
+          status,
+          assinado_at,
+          assinado_por_nome,
+          assinatura_url,
+          pdf_assinado_url,
+          contratado_assinado_at,
+          contratado_assinado_por_nome,
+          contratado_assinatura_url
         `)
         .eq("empresa_id", empresaId)
         .order("created_at", { ascending: false });
@@ -79,7 +128,7 @@ export function ContratosList() {
       const festaIds = contratosData.map((c) => c.festa_id);
       const { data: festasData, error: festasError } = await supabase
         .from("festas")
-        .select("id, titulo, data, cliente_nome, status, tema, local, horario")
+        .select("id, titulo, data, cliente_nome, cliente_contato, status, tema, local, horario")
         .eq("empresa_id", empresaId)
         .in("id", festaIds);
 
@@ -407,6 +456,16 @@ export function ContratosList() {
                               Cancelado
                             </Badge>
                           )}
+                          {contrato.assinado_at && (
+                            <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200">
+                              Assinado em {formatDate(contrato.assinado_at)}
+                            </Badge>
+                          )}
+                          {contrato.contratado_assinado_at && !contrato.assinado_at && (
+                            <Badge className="bg-amber-100 text-amber-800 border border-amber-200">
+                              Aguardando assinatura do cliente
+                            </Badge>
+                          )}
                           {getStatusBadge(contrato.festa.status)}
                           {contrato.orcamento && (
                             <Badge className="bg-green-100 text-green-800">
@@ -422,6 +481,38 @@ export function ContratosList() {
                   </div>
                   
                   <div className="flex flex-col sm:flex-row gap-2">
+                    {contrato.status !== "cancelado" && !contrato.assinado_at && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEnviarParaCliente(contrato)}
+                          disabled={linkLoading}
+                        >
+                          <Link2 className="w-4 h-4 mr-2" />
+                          Enviar para cliente
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setContratoParaAssinar(contrato)}
+                        >
+                          <PenLine className="w-4 h-4 mr-2" />
+                          Assinar
+                        </Button>
+                      </>
+                    )}
+                    {contrato.pdf_assinado_url && (
+                      <a
+                        href={contrato.pdf_assinado_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                      >
+                        <Download className="w-4 h-4" />
+                        Baixar PDF Assinado
+                      </a>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -448,6 +539,54 @@ export function ContratosList() {
           ))}
         </div>
       )}
+
+      <AssinarContratoDialog
+        contrato={contratoParaAssinar}
+        open={!!contratoParaAssinar}
+        onOpenChange={(open) => !open && setContratoParaAssinar(null)}
+        onSuccess={loadContratos}
+      />
+
+      <Dialog open={linkDialog.open} onOpenChange={(open) => !open && setLinkDialog((d) => ({ ...d, open: false }))}>
+        <DialogContent className="max-w-md">
+          <DialogHeader className="pr-10">
+            <DialogClose onClose={() => setLinkDialog((d) => ({ ...d, open: false }))} />
+            <DialogTitle>Link para assinatura do cliente</DialogTitle>
+            <p className="text-sm text-gray-600 mt-1">
+              Envie este link para o cliente assinar o contrato do evento &quot;{linkDialog.contrato?.festa.titulo}&quot;.
+            </p>
+          </DialogHeader>
+          <div className="px-4 sm:px-6 pb-2">
+            {linkDialog.url && (
+              <div className="rounded-md bg-gray-100 p-3 text-sm text-gray-800 break-all select-all">
+                {linkDialog.url}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (linkDialog.url) navigator.clipboard.writeText(linkDialog.url);
+              }}
+            >
+              Copiar link
+            </Button>
+            {linkDialog.contrato?.festa.cliente_contato && (
+              <Button
+                onClick={() => {
+                  const msg = linkDialog.url
+                    ? `Olá! Segue o link para assinar o contrato do evento ${linkDialog.contrato?.festa.titulo}: ${linkDialog.url}`
+                    : "";
+                  window.open(whatsappLink(linkDialog.contrato!.festa.cliente_contato!, msg), "_blank");
+                }}
+              >
+                Enviar por WhatsApp
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

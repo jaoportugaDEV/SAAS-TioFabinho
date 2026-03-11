@@ -3,6 +3,26 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmpresaId } from "@/lib/server-empresa";
 import { revalidatePath } from "next/cache";
+import type { StatusAceite } from "@/types";
+
+export async function atualizarStatusAceite(
+  orcamentoId: string,
+  status: StatusAceite
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient();
+  const empresaId = await getCurrentEmpresaId();
+  if (!empresaId) return { success: false, error: "Empresa não selecionada" };
+
+  const { error } = await supabase
+    .from("orcamentos")
+    .update({ status_aceite: status })
+    .eq("id", orcamentoId)
+    .eq("empresa_id", empresaId);
+
+  if (error) return { success: false, error: error.message };
+  revalidatePath("/dashboard/orcamentos");
+  return { success: true };
+}
 
 export async function excluirOrcamento(orcamentoId: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();

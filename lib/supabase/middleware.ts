@@ -30,8 +30,8 @@ export async function updateSession(request: NextRequest) {
   // Refreshing auth token
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect routes
-  if (!user && !request.nextUrl.pathname.startsWith('/login')) {
+  // Protect routes (permite /assinar sem login para link do cliente)
+  if (!user && !request.nextUrl.pathname.startsWith('/login') && !request.nextUrl.pathname.startsWith('/assinar')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)

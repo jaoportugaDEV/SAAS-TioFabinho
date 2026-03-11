@@ -22,6 +22,8 @@ export type StatusFesta = 'planejamento' | 'confirmada' | 'acontecendo' | 'encer
 
 export type StatusPagamento = 'pendente' | 'pago_parcial' | 'pago_total';
 
+export type StatusAceite = 'aguardando' | 'aceito' | 'recusado';
+
 export type StatusParcela = 'pendente' | 'paga' | 'atrasada';
 
 export type FormaPagamento = 'avista' | 'parcelado';
@@ -124,6 +126,13 @@ export interface Contrato {
   pdf_url: string | null;
   created_at: string;
   status?: string;
+  assinado_at?: string | null;
+  assinado_por_nome?: string | null;
+  assinatura_url?: string | null;
+  pdf_assinado_url?: string | null;
+  contratado_assinado_at?: string | null;
+  contratado_assinado_por_nome?: string | null;
+  contratado_assinatura_url?: string | null;
 }
 
 export interface ItemOrcamento {
@@ -140,6 +149,7 @@ export interface Orcamento {
   acrescimo: number;
   total: number;
   status_pagamento: StatusPagamento;
+  status_aceite: StatusAceite;
   forma_pagamento: FormaPagamento;
   quantidade_parcelas: number;
   entrada: number;
