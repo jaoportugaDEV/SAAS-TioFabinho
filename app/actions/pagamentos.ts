@@ -226,7 +226,6 @@ export async function getFestasPagamentosPendentes() {
     `)
     .eq("empresa_id", empresaId)
     .lte("data", dataHoje)
-    .in("status_pagamento_freelancers", ["pendente", "parcial"])
     .order("data", { ascending: false });
 
   if (error) {
@@ -246,7 +245,39 @@ export async function getFestasPagamentosPendentes() {
     return dataFestaCompleta <= agora;
   }) || [];
 
-  return { success: true, data: festasFiltradas };
+  const updatesStatus: Promise<unknown>[] = [];
+  const festasPendentesReais = festasFiltradas.filter((festa) => {
+    const freelancers = festa.festa_freelancers ?? [];
+    const temFreelancer = freelancers.length > 0;
+    const todosPagos = temFreelancer && freelancers.every((ff) => ff.status_pagamento === "pago");
+    const algumPago = freelancers.some((ff) => ff.status_pagamento === "pago");
+
+    const statusCorreto: "pendente" | "parcial" | "pago" = !temFreelancer
+      ? "pago"
+      : todosPagos
+        ? "pago"
+        : algumPago
+          ? "parcial"
+          : "pendente";
+
+    if (festa.status_pagamento_freelancers !== statusCorreto) {
+      updatesStatus.push(
+        supabase
+          .from("festas")
+          .update({ status_pagamento_freelancers: statusCorreto })
+          .eq("id", festa.id)
+          .eq("empresa_id", empresaId)
+      );
+    }
+
+    return temFreelancer && statusCorreto !== "pago";
+  });
+
+  if (updatesStatus.length > 0) {
+    await Promise.all(updatesStatus);
+  }
+
+  return { success: true, data: festasPendentesReais };
 }
 
 // Buscar contador de festas com pagamentos pendentes

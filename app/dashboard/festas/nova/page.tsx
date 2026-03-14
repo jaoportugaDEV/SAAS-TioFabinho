@@ -163,6 +163,7 @@ export default function NovaFestaPage() {
             quantidade_criancas: formData.quantidade_criancas || null,
             faixas_etarias: formData.faixas_etarias.length > 0 ? formData.faixas_etarias : null,
             status: formData.status,
+            status_pagamento_freelancers: formData.freelancers.length > 0 ? "pendente" : "pago",
           },
         ])
         .select()

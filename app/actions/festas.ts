@@ -158,7 +158,37 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
     return { success: false, error: error.message };
   }
 
+  const { data: freelancersStatus, error: statusError } = await supabase
+    .from("festa_freelancers")
+    .select("status_pagamento")
+    .eq("festa_id", festaId);
+
+  if (statusError) {
+    console.error("Erro ao recalcular status de pagamento:", statusError);
+    return { success: false, error: statusError.message };
+  }
+
+  const todosPagos = (freelancersStatus ?? []).every((f) => f.status_pagamento === "pago");
+  const algumPago = (freelancersStatus ?? []).some((f) => f.status_pagamento === "pago");
+  const statusGeral: "pendente" | "parcial" | "pago" = todosPagos
+    ? "pago"
+    : algumPago
+      ? "parcial"
+      : "pendente";
+
+  const { error: updateStatusError } = await supabase
+    .from("festas")
+    .update({ status_pagamento_freelancers: statusGeral })
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId);
+
+  if (updateStatusError) {
+    console.error("Erro ao atualizar status de pagamento da festa:", updateStatusError);
+    return { success: false, error: updateStatusError.message };
+  }
+
   revalidatePath(`/dashboard/festas/${festaId}`);
+  revalidatePath("/dashboard/pagamentos");
   return { success: true, data };
 }
 
@@ -192,7 +222,36 @@ export async function removeFreelancerFromFesta(festaId: string, freelancerId: s
     return { success: false, error: error.message };
   }
 
+  const { data: freelancersStatus, error: statusError } = await supabase
+    .from("festa_freelancers")
+    .select("status_pagamento")
+    .eq("festa_id", festaId);
+
+  if (statusError) {
+    console.error("Erro ao recalcular status de pagamento:", statusError);
+    return { success: false, error: statusError.message };
+  }
+
+  let statusGeral: "pendente" | "parcial" | "pago" = "pago";
+  if (freelancersStatus && freelancersStatus.length > 0) {
+    const todosPagos = freelancersStatus.every((f) => f.status_pagamento === "pago");
+    const algumPago = freelancersStatus.some((f) => f.status_pagamento === "pago");
+    statusGeral = todosPagos ? "pago" : algumPago ? "parcial" : "pendente";
+  }
+
+  const { error: updateStatusError } = await supabase
+    .from("festas")
+    .update({ status_pagamento_freelancers: statusGeral })
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId);
+
+  if (updateStatusError) {
+    console.error("Erro ao atualizar status de pagamento da festa:", updateStatusError);
+    return { success: false, error: updateStatusError.message };
+  }
+
   revalidatePath(`/dashboard/festas/${festaId}`);
+  revalidatePath("/dashboard/pagamentos");
   return { success: true };
 }
 
