@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Calendar, Eye, Wallet, CheckCircle, Clock, AlertCircle, DollarSign, Users } from "lucide-react";
 import { formatDate, festaJaComecou } from "@/lib/utils";
 import { autoUpdateFestaStatus, checkAndUpdatePagamentosCompletos } from "@/app/actions/auto-update-status";
+import { STATUS_PAGAMENTO_LABEL } from "@/lib/orcamentos/pagamento-utils";
 
 // Interface estendida para incluir informações de pagamento e orçamento
 interface FestaComPagamentos extends Festa {
@@ -397,9 +398,11 @@ export default function FestasPage() {
                           <DollarSign className="w-3 h-3 mr-1" />
                           <span className="hidden sm:inline">
                             Cliente: {
-                              festa.statusPagamentoCliente === 'pago_total' ? 'Pago'
-                              : festa.statusPagamentoCliente === 'pago_parcial' ? 'Parcial'
-                              : 'Pendente'
+                              festa.statusPagamentoCliente === 'pago_total'
+                                ? STATUS_PAGAMENTO_LABEL.pago_total
+                                : festa.statusPagamentoCliente === 'pago_parcial'
+                                  ? STATUS_PAGAMENTO_LABEL.pago_parcial
+                                  : STATUS_PAGAMENTO_LABEL.pendente
                             }
                           </span>
                           <span className="sm:hidden">

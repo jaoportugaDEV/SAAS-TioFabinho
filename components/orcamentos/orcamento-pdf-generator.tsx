@@ -5,6 +5,7 @@ import { Download } from "lucide-react";
 import jsPDF from "jspdf";
 import { formatDate } from "@/lib/utils";
 import { useEmpresa } from "@/lib/empresa-context";
+import { STATUS_PAGAMENTO_LABEL } from "@/lib/orcamentos/pagamento-utils";
 
 interface ItemOrcamento {
   descricao: string;
@@ -287,12 +288,7 @@ export function OrcamentoPDFGenerator({
       // Status de Pagamento
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      const statusMap: Record<string, string> = {
-        pendente: "Pendente",
-        pago_parcial: "Pago Parcial",
-        pago_total: "Pago Total",
-      };
-      const statusTexto = statusMap[orcamento.status_pagamento] || orcamento.status_pagamento;
+      const statusTexto = STATUS_PAGAMENTO_LABEL[orcamento.status_pagamento as keyof typeof STATUS_PAGAMENTO_LABEL] || orcamento.status_pagamento;
       doc.text(`Status do Pagamento: ${statusTexto}`, margin, yPosition);
       yPosition += 10;
 

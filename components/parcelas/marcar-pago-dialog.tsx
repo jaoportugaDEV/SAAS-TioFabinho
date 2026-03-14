@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ParcelaPagamento } from "@/types";
+import { getPagamentoStatusFromParcelas } from "@/lib/orcamentos/pagamento-utils";
 
 interface MarcarPagoDialogProps {
   open: boolean;
@@ -63,16 +64,7 @@ export function MarcarPagoDialog({
 
       if (parcelasError) throw parcelasError;
 
-      const todasPagas = todasParcelas?.every((p) => p.status === "paga");
-      const algumaPaga = todasParcelas?.some((p) => p.status === "paga");
-
-      // Atualizar status do orçamento
-      let novoStatus: "pendente" | "pago_parcial" | "pago_total" = "pendente";
-      if (todasPagas) {
-        novoStatus = "pago_total";
-      } else if (algumaPaga) {
-        novoStatus = "pago_parcial";
-      }
+      const novoStatus = getPagamentoStatusFromParcelas(todasParcelas || []);
 
       const { error: orcamentoError } = await supabase
         .from("orcamentos")

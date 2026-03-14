@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { useEmpresa } from "@/lib/empresa-context";
 import { StatsCards } from "@/components/orcamentos/stats-cards";
 import { OrcamentosList } from "@/components/orcamentos/orcamentos-list";
+import { getOrcamentoPagamentoResumo, sumParcelasPagas } from "@/lib/orcamentos/pagamento-utils";
 
 interface ItemOrcamento {
   descricao: string;
@@ -21,6 +22,8 @@ interface OrcamentoComFesta {
   acrescimo: number;
   total: number;
   status_pagamento: string;
+  forma_pagamento?: string;
+  entrada?: number;
   status_aceite?: string;
   observacoes?: string;
   created_at: string;
@@ -77,12 +80,16 @@ export default function OrcamentosPage() {
       const completos = orcamentosData.map((orcamento) => {
         const festa = festasData?.find((f) => f.id === orcamento.festa_id);
         const parcelasOrcamento = parcelasData?.filter((p) => p.orcamento_id === orcamento.id) || [];
-        const valorPagoParcelas = parcelasOrcamento
-          .filter((p) => p.status === "pago")
-          .reduce((acc, p) => acc + Number(p.valor), 0);
+        const valorPagoParcelas = sumParcelasPagas(parcelasOrcamento);
+        const resumo = getOrcamentoPagamentoResumo(
+          Number(orcamento.total),
+          valorPagoParcelas,
+          orcamento.forma_pagamento,
+          Number(orcamento.entrada || 0)
+        );
         return {
           ...orcamento,
-          valor_pago_parcelas: valorPagoParcelas,
+          valor_pago_parcelas: resumo.valorPagoReal,
           festa: festa || { id: orcamento.festa_id, titulo: "Festa não encontrada", data: "", cliente_nome: "", cliente_contato: "", status: "planejamento", tema: "", local: "" },
         };
       });
@@ -155,13 +162,17 @@ export default function OrcamentosPage() {
         const cliente = festa?.cliente_id ? clientesMap.get(festa.cliente_id) : undefined;
         // Calcular valor pago real (incluindo parcelas)
         const parcelasOrcamento = parcelasData?.filter((p) => p.orcamento_id === orcamento.id) || [];
-        const valorPagoParcelas = parcelasOrcamento
-          .filter((p) => p.status === "pago")
-          .reduce((acc, p) => acc + Number(p.valor), 0);
+        const valorPagoParcelas = sumParcelasPagas(parcelasOrcamento);
+        const resumo = getOrcamentoPagamentoResumo(
+          Number(orcamento.total),
+          valorPagoParcelas,
+          orcamento.forma_pagamento,
+          Number(orcamento.entrada || 0)
+        );
         
         return {
           ...orcamento,
-          valor_pago_parcelas: valorPagoParcelas,
+          valor_pago_parcelas: resumo.valorPagoReal,
           festa: festa || {
             id: orcamento.festa_id,
             titulo: "Festa não encontrada",
@@ -219,25 +230,20 @@ export default function OrcamentosPage() {
       if ((orcamento.status_aceite ?? "aguardando") === "recusado") return acc;
 
       const total = Number(orcamento.total);
-      const valorPagoParcelas = Number(orcamento.valor_pago_parcelas || 0);
+      const resumo = getOrcamentoPagamentoResumo(
+        total,
+        Number(orcamento.valor_pago_parcelas || 0)
+      );
 
       acc.totalGeral += total;
 
       if (orcamento.status_pagamento === "pago_total") {
-        // Orçamento pago integralmente
         acc.totalPago += total;
-      } else if (orcamento.status_pagamento === "pago_parcial") {
-        // Orçamento com parcelas pagas
-        acc.totalPago += valorPagoParcelas;
-        acc.totalParcial += total - valorPagoParcelas;
-      } else if (orcamento.status_pagamento === "pendente") {
-        // Se tem parcelas pagas mesmo marcado como pendente
-        if (valorPagoParcelas > 0) {
-          acc.totalPago += valorPagoParcelas;
-          acc.totalPendente += total - valorPagoParcelas;
-        } else {
-          acc.totalPendente += total;
-        }
+      } else if (resumo.isParcial) {
+        acc.totalPago += resumo.valorPagoReal;
+        acc.totalParcial += resumo.valorPendente;
+      } else {
+        acc.totalPendente += total;
       }
 
       return acc;

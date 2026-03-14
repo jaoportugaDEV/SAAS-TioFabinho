@@ -12,6 +12,7 @@ import { OrcamentoPDFGenerator } from "./orcamento-pdf-generator";
 import { excluirOrcamento, atualizarStatusAceite } from "@/app/actions/orcamentos";
 import { ContratoGenerator } from "@/components/festas/contrato-generator";
 import type { StatusAceite } from "@/types";
+import { STATUS_PAGAMENTO_LABEL } from "@/lib/orcamentos/pagamento-utils";
 
 interface ItemOrcamento {
   descricao: string;
@@ -117,9 +118,9 @@ export function OrcamentosList({
 
   const getStatusBadge = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      pendente: { label: "Pendente", className: "bg-red-100 text-red-800" },
-      pago_parcial: { label: "Pago Parcial", className: "bg-yellow-100 text-yellow-800" },
-      pago_total: { label: "Pago", className: "bg-green-100 text-green-800" },
+      pendente: { label: STATUS_PAGAMENTO_LABEL.pendente, className: "bg-red-100 text-red-800" },
+      pago_parcial: { label: STATUS_PAGAMENTO_LABEL.pago_parcial, className: "bg-yellow-100 text-yellow-800" },
+      pago_total: { label: "Pago Total", className: "bg-green-100 text-green-800" },
     };
 
     const statusInfo = statusMap[status] || { label: status, className: "bg-gray-100 text-gray-800" };

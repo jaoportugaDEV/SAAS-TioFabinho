@@ -45,7 +45,7 @@ export function StatsCards({
       borderColor: "border-green-200",
     },
     {
-      title: "Pagamento Parcial",
+      title: "Pago Parcial",
       value: formatCurrency(totalParcial),
       icon: TrendingUp,
       description: "Pagamentos em andamento",
