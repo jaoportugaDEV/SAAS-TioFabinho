@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useEmpresa } from "@/lib/empresa-context";
+import { resolveValorAcordado } from "@/lib/freelancers/valor-acordado";
 import { Freelancer } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +19,7 @@ export default function EditarFreelancerPage() {
   const params = useParams();
   const router = useRouter();
   const supabase = createClient();
+  const { empresaId } = useEmpresa();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -28,21 +31,26 @@ export default function EditarFreelancerPage() {
   const [valorFuncao, setValorFuncao] = useState<number>(0);
 
   useEffect(() => {
-    loadFreelancer();
-  }, [params.id]);
+    if (empresaId) {
+      loadFreelancer();
+    }
+  }, [params.id, empresaId]);
 
   useEffect(() => {
-    if (freelancer) {
+    if (freelancer && empresaId) {
       loadValorFuncao(freelancer.funcao);
     }
-  }, [freelancer?.funcao]);
+  }, [freelancer?.funcao, empresaId]);
 
   const loadFreelancer = async () => {
+    if (!empresaId) return;
+
     try {
       const { data, error } = await supabase
         .from("freelancers")
         .select("*")
         .eq("id", params.id)
+        .eq("empresa_id", empresaId)
         .single();
 
       if (error) throw error;
@@ -61,17 +69,32 @@ export default function EditarFreelancerPage() {
   };
 
   const loadValorFuncao = async (funcao: string) => {
+    if (!empresaId) {
+      setValorFuncao(0);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from("valores_funcoes")
         .select("valor")
         .eq("funcao", funcao)
-        .single();
+        .eq("empresa_id", empresaId)
+        .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Erro ao carregar valor da função", {
+          code: (error as { code?: string }).code,
+          message: (error as { message?: string }).message,
+          details: (error as { details?: string }).details,
+        });
+        setValorFuncao(0);
+        return;
+      }
+
       setValorFuncao(data?.valor || 0);
     } catch (error) {
-      console.error("Erro ao carregar valor da função:", error);
+      console.error("Erro inesperado ao carregar valor da função", error);
       setValorFuncao(0);
     }
   };
@@ -151,6 +174,7 @@ export default function EditarFreelancerPage() {
           pix: freelancer.pix,
           foto_url: fotoUrl || null,
           bonus_fixo: freelancer.bonus_fixo || 0,
+          valor_padrao: freelancer.valor_padrao || 0,
           ativo: freelancer.ativo,
           dias_semana_disponiveis: diasSemana,
         })
@@ -293,13 +317,29 @@ export default function EditarFreelancerPage() {
               />
             </div>
 
-            {/* Valor Padrão - Somente Leitura */}
+            {/* Valor por Festa */}
             <div className="space-y-2">
-              <Label>Valor por Festa</Label>
+              <Label htmlFor="valor_padrao">Valor customizado por festa (opcional)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+                <Input
+                  id="valor_padrao"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={freelancer.valor_padrao || 0}
+                  onChange={(e) =>
+                    setFreelancer({ ...freelancer, valor_padrao: parseFloat(e.target.value) || 0 })
+                  }
+                  onFocus={(e) => e.target.select()}
+                  className="pl-12"
+                  placeholder="0,00"
+                />
+              </div>
               <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600 mb-1">Valor configurado para esta função:</p>
+                    <p className="text-sm text-gray-600 mb-1">Valor padrão da função em Configurações:</p>
                     <p className="text-2xl font-bold text-green-600">
                       R$ {valorFuncao.toFixed(2)}
                     </p>
@@ -312,8 +352,9 @@ export default function EditarFreelancerPage() {
                 </div>
               </div>
               <p className="text-xs text-gray-500">
-                💡 O valor é definido pela função em <Link href="/dashboard/configuracoes" className="text-primary hover:underline">Configurações</Link>. 
-                Quando este freelancer for adicionado a uma festa, receberá automaticamente este valor.
+                Se deixar em <strong>0</strong>, o sistema usa automaticamente o valor da função em{" "}
+                <Link href="/dashboard/configuracoes" className="text-primary hover:underline">Configurações</Link>.
+                Se preencher acima de 0, este valor vira prioridade para este freelancer.
               </p>
             </div>
 
@@ -337,15 +378,15 @@ export default function EditarFreelancerPage() {
                 />
               </div>
               <p className="text-xs text-gray-500">
-                💰 Este valor será <strong>adicionado automaticamente como bônus</strong> quando o freelancer for adicionado a uma festa. 
-                Útil para freelancers que sempre recebem um valor extra fixo.
+                Este bônus fixo será aplicado automaticamente apenas em <strong>novas vinculações</strong> do freelancer em festas.
+                Ajustes pontuais devem ser feitos como bônus da festa.
               </p>
               {(freelancer.bonus_fixo || 0) > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-900">
-                    ℹ️ Valor total ao adicionar em festas: <strong>R$ {(valorFuncao + (freelancer.bonus_fixo || 0)).toFixed(2)}</strong>
+                    ℹ️ Valor total ao adicionar em novas festas: <strong>R$ {(resolveValorAcordado(freelancer.valor_padrao, valorFuncao) + (freelancer.bonus_fixo || 0)).toFixed(2)}</strong>
                     <span className="text-xs block mt-1">
-                      (R$ {valorFuncao.toFixed(2)} base + R$ {(freelancer.bonus_fixo || 0).toFixed(2)} bônus)
+                      (R$ {resolveValorAcordado(freelancer.valor_padrao, valorFuncao).toFixed(2)} base + R$ {(freelancer.bonus_fixo || 0).toFixed(2)} bônus)
                     </span>
                   </p>
                 </div>

@@ -14,6 +14,7 @@ import { StepFreelancers } from "@/components/festas/step-freelancers";
 import { StepOrcamento } from "@/components/festas/step-orcamento";
 import { StepChecklist } from "@/components/festas/step-checklist";
 import { buscarOuCriarCliente } from "@/app/actions/clientes";
+import { resolveValorAcordado } from "@/lib/freelancers/valor-acordado";
 
 const steps = [
   { id: 1, title: "Informações Básicas" },
@@ -176,7 +177,7 @@ export default function NovaFestaPage() {
         // Buscar informações dos freelancers e valores das funções
         const { data: freelancersData, error: freelancersError } = await supabase
           .from("freelancers")
-          .select("id, funcao")
+          .select("id, funcao, bonus_fixo, valor_padrao")
           .in("id", formData.freelancers);
 
         if (freelancersError) throw freelancersError;
@@ -200,7 +201,10 @@ export default function NovaFestaPage() {
         const freelancerInserts = freelancersData?.map((freelancer) => ({
           festa_id: festa.id,
           freelancer_id: freelancer.id,
-          valor_acordado: valoresMap.get(freelancer.funcao) || 0,
+          valor_acordado: resolveValorAcordado(freelancer.valor_padrao, valoresMap.get(freelancer.funcao)),
+          valor_bonus: freelancer.bonus_fixo || 0,
+          motivo_bonus:
+            (freelancer.bonus_fixo || 0) > 0 ? "Bonificação fixa do freelancer" : null,
           status_pagamento: 'pendente',
         })) || [];
 

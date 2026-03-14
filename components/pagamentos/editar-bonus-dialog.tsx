@@ -102,7 +102,7 @@ export function EditarBonusDialog({
           <div className="border-b p-3 sm:p-4 md:p-6">
             <div className="flex items-center gap-2">
               <DollarSign className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
-              <h2 className="text-base sm:text-lg md:text-xl font-semibold">Editar Bônus</h2>
+              <h2 className="text-base sm:text-lg md:text-xl font-semibold">Editar Bônus da Festa</h2>
             </div>
             <p className="text-xs sm:text-sm text-gray-600 mt-1 truncate">
               <span className="hidden sm:inline">Freelancer: </span>
@@ -146,7 +146,7 @@ export function EditarBonusDialog({
                 />
               </div>
               <p className="text-xs text-gray-500">
-                💡 Digite 0 para remover o bônus
+                Digite 0 para remover o bônus desta festa.
               </p>
             </div>
 
@@ -167,6 +167,9 @@ export function EditarBonusDialog({
               />
               <p className="text-xs text-gray-500">
                 {motivoBonus.length}/200 caracteres
+              </p>
+              <p className="text-xs text-gray-500">
+                Este ajuste vale apenas para esta festa e não altera a bonificação fixa do cadastro.
               </p>
             </div>
 

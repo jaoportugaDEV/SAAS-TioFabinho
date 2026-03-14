@@ -125,16 +125,25 @@ export default function DetalheFestaPage() {
 
       // Carregar freelancers disponíveis (que não estão na festa)
       const freelancersNaFesta = festaFreelancersData?.map((f: any) => f.freelancer_id) || [];
-      
-      const { data: availableData, error: availableError } = await supabase
+
+      let availableQuery = supabase
         .from("freelancers")
         .select("*")
         .eq("empresa_id", empresaId)
-        .eq("ativo", true)
-        .not("id", "in", `(${freelancersNaFesta.length > 0 ? freelancersNaFesta.join(",") : "null"})`);
+        .eq("ativo", true);
 
-      if (!availableError && availableData) {
-        setAvailableFreelancers(availableData);
+      if (freelancersNaFesta.length > 0) {
+        const idsExclusao = freelancersNaFesta.map((id: string) => `"${id}"`).join(",");
+        availableQuery = availableQuery.not("id", "in", `(${idsExclusao})`);
+      }
+
+      const { data: availableData, error: availableError } = await availableQuery;
+
+      if (availableError) {
+        console.error("Erro ao carregar freelancers disponíveis:", availableError);
+        setAvailableFreelancers([]);
+      } else {
+        setAvailableFreelancers(availableData || []);
       }
 
       // Carregar orçamento

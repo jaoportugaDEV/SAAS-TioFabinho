@@ -51,9 +51,11 @@ export function FreelancerManager({
   const [festaFreelancers, setFestaFreelancers] = useState(initialFestaFreelancers);
   const [availableFreelancers, setAvailableFreelancers] = useState(initialAvailableFreelancers);
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [addingFreelancerId, setAddingFreelancerId] = useState<string | null>(null);
+  const [removingFreelancerId, setRemovingFreelancerId] = useState<string | null>(null);
   const [filtroFuncao, setFiltroFuncao] = useState<string>("todos");
   const [loadingWhatsApp, setLoadingWhatsApp] = useState<string | null>(null); // ID do freelancer que está carregando
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
   
   // Estado para dialog de edição de bônus
   const [editandoBonus, setEditandoBonus] = useState<{
@@ -100,25 +102,28 @@ export function FreelancerManager({
       freelancer: freelancerToAdd,
     };
 
-    setFestaFreelancers([...festaFreelancers, novoFestaFreelancer]);
-    setAvailableFreelancers(availableFreelancers.filter(f => f.id !== freelancerId));
-    setShowAddDialog(false); // Fechar o dialog
+    setFestaFreelancers(prev => [...prev, novoFestaFreelancer]);
+    setAvailableFreelancers(prev => prev.filter(f => f.id !== freelancerId));
+    setFeedback(null);
 
     // Fazer a chamada real à API em background
-    setLoading(true);
+    setAddingFreelancerId(freelancerId);
     const result = await addFreelancerToFesta(festaId, freelancerId);
-    setLoading(false);
+    setAddingFreelancerId(null);
 
     if (!result.success) {
       // Se falhar, reverter as mudanças
-      alert("Erro ao adicionar freelancer. Tente novamente.");
-      setFestaFreelancers(festaFreelancers.filter(f => f.freelancer_id !== freelancerId));
-      setAvailableFreelancers([...availableFreelancers, freelancerToAdd]);
+      setFeedback({ type: "error", message: "Erro ao adicionar freelancer. Tente novamente." });
+      setFestaFreelancers(prev => prev.filter(f => f.id !== novoFestaFreelancer.id));
+      setAvailableFreelancers(prev =>
+        prev.some((f) => f.id === freelancerToAdd.id) ? prev : [...prev, freelancerToAdd]
+      );
     } else if (result.data) {
       // Atualizar com os dados reais do servidor (incluindo ID real)
       setFestaFreelancers(prev => 
         prev.map(f => f.id === novoFestaFreelancer.id ? result.data : f)
       );
+      setFeedback({ type: "success", message: `${freelancerToAdd.nome} adicionado(a) com sucesso.` });
     }
   };
 
@@ -127,22 +132,33 @@ export function FreelancerManager({
       return;
     }
 
-    setLoading(true);
-    const result = await removeFreelancerFromFesta(festaId, freelancerId);
+    const removedFreelancer = festaFreelancers.find(f => f.freelancer_id === freelancerId);
+    if (!removedFreelancer) return;
 
-    if (result.success) {
-      setFestaFreelancers(festaFreelancers.filter(f => f.freelancer_id !== freelancerId));
-      
-      // Adiciona de volta à lista de disponíveis
-      const removedFreelancer = festaFreelancers.find(f => f.freelancer_id === freelancerId);
-      if (removedFreelancer) {
-        setAvailableFreelancers([...availableFreelancers, removedFreelancer.freelancer]);
-      }
-    } else {
-      alert("Erro ao remover freelancer. Tente novamente.");
+    // Update otimista: remove da equipe e recoloca na lista de disponíveis
+    setFestaFreelancers(prev => prev.filter(f => f.freelancer_id !== freelancerId));
+    setAvailableFreelancers(prev =>
+      prev.some((f) => f.id === removedFreelancer.freelancer.id)
+        ? prev
+        : [...prev, removedFreelancer.freelancer]
+    );
+    setFeedback(null);
+
+    setRemovingFreelancerId(freelancerId);
+    const result = await removeFreelancerFromFesta(festaId, freelancerId);
+    setRemovingFreelancerId(null);
+
+    if (!result.success) {
+      // Reverter se falhar
+      setFestaFreelancers(prev =>
+        prev.some((f) => f.freelancer_id === freelancerId) ? prev : [...prev, removedFreelancer]
+      );
+      setAvailableFreelancers(prev => prev.filter(f => f.id !== removedFreelancer.freelancer.id));
+      setFeedback({ type: "error", message: "Erro ao remover freelancer. Tente novamente." });
+      return;
     }
 
-    setLoading(false);
+    setFeedback({ type: "success", message: `${removedFreelancer.freelancer.nome} removido(a) da festa.` });
   };
 
   const handleToggleConfirmacao = async (freelancerId: string, currentStatus: string) => {
@@ -244,6 +260,18 @@ export function FreelancerManager({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0">
+        {feedback && (
+          <div
+            className={`rounded-md border px-3 py-2 text-sm ${
+              feedback.type === "success"
+                ? "border-green-200 bg-green-50 text-green-700"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {feedback.message}
+          </div>
+        )}
+
         {/* Dialog para adicionar freelancer */}
         {showAddDialog && (
           <div className="border-2 border-dashed border-primary rounded-lg p-3 sm:p-4 space-y-3 bg-gray-50">
@@ -354,12 +382,12 @@ export function FreelancerManager({
                         <Button
                           size="sm"
                           onClick={() => handleAddFreelancer(freelancer.id)}
-                          disabled={loading}
+                          disabled={addingFreelancerId !== null}
                           className="flex-1 gap-1 text-xs"
                           title={!disponivel ? "Adicionar mesmo assim (verifique disponibilidade antes)" : "Adicionar freelancer"}
                         >
                           <Plus className="w-3 h-3" />
-                          Adicionar
+                          {addingFreelancerId === freelancer.id ? "Adicionando..." : "Adicionar"}
                         </Button>
                       </div>
                     </div>
@@ -457,10 +485,10 @@ export function FreelancerManager({
                       variant="outline"
                       onClick={() => handleAbrirEditarBonus(festaFreelancer)}
                       className="text-xs sm:text-sm gap-1"
-                      title="Editar valor e bônus"
+                      title="Editar bônus desta festa"
                     >
                       <DollarSign className="w-4 h-4" />
-                      <span className="hidden sm:inline">Editar Valor</span>
+                      <span className="hidden sm:inline">Bônus da Festa</span>
                     </Button>
                     <Button
                       size="sm"
@@ -483,11 +511,15 @@ export function FreelancerManager({
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemoveFreelancer(festaFreelancer.freelancer_id)}
-                      disabled={loading}
+                      disabled={removingFreelancerId === festaFreelancer.freelancer_id}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       title="Remover da festa"
                     >
-                      <X className="w-4 h-4" />
+                      {removingFreelancerId === festaFreelancer.freelancer_id ? (
+                        <Clock className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <X className="w-4 h-4" />
+                      )}
                     </Button>
                   </div>
                 </div>

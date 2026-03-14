@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Upload, Save } from "lucide-react";
 import Link from "next/link";
-import { VALORES_PADRAO_POR_FUNCAO } from "@/lib/constants";
+import { resolveValorAcordado } from "@/lib/freelancers/valor-acordado";
 
 export default function NovoFreelancerPage() {
   const router = useRouter();
@@ -22,21 +22,43 @@ export default function NovoFreelancerPage() {
   const [uploading, setUploading] = useState(false);
   const [fotoUrl, setFotoUrl] = useState<string>("");
   const [diasSemana, setDiasSemana] = useState<number[]>([]);
+  const [valorFuncao, setValorFuncao] = useState<number>(0);
   const [formData, setFormData] = useState({
     nome: "",
     funcao: "monitor" as "monitor" | "cozinheira" | "fotografo" | "garcom" | "recepcao" | "outros",
     whatsapp: "",
     pix: "",
-    valor_padrao: 50, // Valor inicial para monitor
+    valor_padrao: 0, // 0 = usar valor da função em Configurações
     bonus_fixo: 0, // Bonificação fixa
     ativo: true,
   });
 
-  // Atualizar valor padrão quando a função mudar
+  // Buscar valor da função em Configurações
   useEffect(() => {
-    const valorPadrao = VALORES_PADRAO_POR_FUNCAO[formData.funcao];
-    setFormData(prev => ({ ...prev, valor_padrao: valorPadrao }));
-  }, [formData.funcao]);
+    const loadValorFuncao = async () => {
+      if (!empresaId) return;
+
+      const { data, error } = await supabase
+        .from("valores_funcoes")
+        .select("valor")
+        .eq("empresa_id", empresaId)
+        .eq("funcao", formData.funcao)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Erro ao carregar valor da função", {
+          code: (error as { code?: string }).code,
+          message: (error as { message?: string }).message,
+        });
+        setValorFuncao(0);
+        return;
+      }
+
+      setValorFuncao(data?.valor || 0);
+    };
+
+    loadValorFuncao();
+  }, [empresaId, formData.funcao]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -238,9 +260,9 @@ export default function NovoFreelancerPage() {
               />
             </div>
 
-            {/* Valor Padrão */}
+            {/* Valor por Festa */}
             <div className="space-y-2">
-              <Label htmlFor="valor_padrao">Valor Padrão por Festa *</Label>
+              <Label htmlFor="valor_padrao">Valor customizado por festa (opcional)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
                 <Input
@@ -252,14 +274,16 @@ export default function NovoFreelancerPage() {
                   onChange={(e) => setFormData({ ...formData, valor_padrao: parseFloat(e.target.value) || 0 })}
                   placeholder="0,00"
                   className="pl-10"
-                  required
                 />
               </div>
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-sm text-green-800">
+                  Valor padrão da função ({formData.funcao}) em Configurações: <strong>R$ {valorFuncao.toFixed(2)}</strong>
+                </p>
+              </div>
               <p className="text-xs text-gray-500">
-                {VALORES_PADRAO_POR_FUNCAO[formData.funcao] > 0 
-                  ? `Valor padrão para ${formData.funcao}: R$ ${VALORES_PADRAO_POR_FUNCAO[formData.funcao].toFixed(2)}. Você pode editar para dar bônus.`
-                  : "Defina o valor que este freelancer receberá por festa."
-                }
+                Deixe em <strong>0</strong> para usar automaticamente o valor da função em Configurações.
+                Se preencher acima de 0, este valor será prioritário para este freelancer.
               </p>
             </div>
 
@@ -281,15 +305,15 @@ export default function NovoFreelancerPage() {
                 />
               </div>
               <p className="text-xs text-gray-500">
-                💰 Este valor será <strong>adicionado automaticamente como bônus</strong> quando o freelancer for adicionado a uma festa. 
-                Útil para freelancers que sempre recebem um valor extra fixo.
+                Este bônus fixo será aplicado automaticamente apenas em <strong>novas vinculações</strong> em festas.
+                Ajustes pontuais devem ser feitos como bônus da festa.
               </p>
               {formData.bonus_fixo > 0 && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-900">
-                    ℹ️ Valor total ao adicionar em festas: <strong>R$ {(formData.valor_padrao + formData.bonus_fixo).toFixed(2)}</strong>
+                    ℹ️ Valor total ao adicionar em novas festas: <strong>R$ {(resolveValorAcordado(formData.valor_padrao, valorFuncao) + formData.bonus_fixo).toFixed(2)}</strong>
                     <span className="text-xs block mt-1">
-                      (R$ {formData.valor_padrao.toFixed(2)} base + R$ {formData.bonus_fixo.toFixed(2)} bônus)
+                      (R$ {resolveValorAcordado(formData.valor_padrao, valorFuncao).toFixed(2)} base + R$ {formData.bonus_fixo.toFixed(2)} bônus)
                     </span>
                   </p>
                 </div>

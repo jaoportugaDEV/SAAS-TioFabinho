@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentEmpresaId } from "@/lib/server-empresa";
+import { resolveValorAcordado } from "@/lib/freelancers/valor-acordado";
 import { StatusFesta } from "@/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -112,9 +113,21 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
   const empresaId = await getCurrentEmpresaId();
   if (!empresaId) return { success: false, error: "Empresa não selecionada" };
 
+  // festa_freelancers não tem empresa_id; validar a festa da empresa antes de inserir
+  const { data: festa, error: festaError } = await supabase
+    .from("festas")
+    .select("id")
+    .eq("id", festaId)
+    .eq("empresa_id", empresaId)
+    .single();
+
+  if (festaError || !festa) {
+    return { success: false, error: "Festa não encontrada na empresa atual" };
+  }
+
   const { data: freelancer, error: freelancerError } = await supabase
     .from("freelancers")
-    .select("funcao, bonus_fixo")
+    .select("funcao, bonus_fixo, valor_padrao")
     .eq("id", freelancerId)
     .eq("empresa_id", empresaId)
     .single();
@@ -129,20 +142,21 @@ export async function addFreelancerToFesta(festaId: string, freelancerId: string
     .select("valor")
     .eq("funcao", freelancer.funcao)
     .eq("empresa_id", empresaId)
-    .single();
+    .maybeSingle();
 
   if (valorError) {
     console.error("Erro ao buscar valor da função:", valorError);
   }
 
   const bonusFixo = freelancer.bonus_fixo || 0;
+  const valorAcordado = resolveValorAcordado(freelancer.valor_padrao, valorFuncao?.valor);
 
   const { data, error } = await supabase
     .from("festa_freelancers")
     .insert({
       festa_id: festaId,
       freelancer_id: freelancerId,
-      valor_acordado: valorFuncao?.valor || 0,
+      valor_acordado: valorAcordado,
       valor_bonus: bonusFixo,
       motivo_bonus: bonusFixo > 0 ? "Bonificação fixa do freelancer" : null,
       status_pagamento: 'pendente',

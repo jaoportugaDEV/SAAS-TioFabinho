@@ -765,7 +765,7 @@ export default function PagamentosPage() {
                                       className="w-full sm:flex-1 gap-2"
                                     >
                                       <DollarSign className="w-4 h-4" />
-                                      <span className="text-xs sm:text-sm">Editar Valor/Bônus</span>
+                                      <span className="text-xs sm:text-sm">Editar Bônus da Festa</span>
                                     </Button>
                                     <Button
                                       size="sm"
