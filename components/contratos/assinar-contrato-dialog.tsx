@@ -111,7 +111,7 @@ export function AssinarContratoDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-[95vw] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Assinar contrato</DialogTitle>
           <DialogDescription>
@@ -157,7 +157,7 @@ export function AssinarContratoDialog({
           />
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
             Cancelar
           </Button>

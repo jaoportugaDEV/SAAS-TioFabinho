@@ -32,6 +32,7 @@ export function AssinaturaCanvas({ onConfirm, disabled }: AssinaturaCanvasProps)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isEmpty, setIsEmpty] = useState(true);
   const isDrawingRef = useRef(false);
+  const isEmptyRef = useRef(true);
 
   const draw = useCallback(
     (x: number, y: number) => {
@@ -64,20 +65,55 @@ export function AssinaturaCanvas({ onConfirm, disabled }: AssinaturaCanvasProps)
   }, []);
 
   useEffect(() => {
+    isEmptyRef.current = isEmpty;
+  }, [isEmpty]);
+
+  const resizeCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+
+    const prevWidth = canvas.width;
+    const prevHeight = canvas.height;
+    let previousContent: HTMLCanvasElement | null = null;
+    if (prevWidth > 0 && prevHeight > 0 && !isEmptyRef.current) {
+      previousContent = document.createElement("canvas");
+      previousContent.width = prevWidth;
+      previousContent.height = prevHeight;
+      const previousCtx = previousContent.getContext("2d");
+      if (previousCtx) {
+        previousCtx.drawImage(canvas, 0, 0);
+      }
+    }
+
     const dpr = window.devicePixelRatio ?? 1;
     const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.floor(rect.width * dpr);
-    canvas.height = Math.floor(rect.height * dpr);
-    ctx.scale(dpr, dpr);
+    const nextWidth = Math.max(1, Math.floor(rect.width * dpr));
+    const nextHeight = Math.max(1, Math.floor(rect.height * dpr));
+    if (canvas.width !== nextWidth || canvas.height !== nextHeight) {
+      canvas.width = nextWidth;
+      canvas.height = nextHeight;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.strokeStyle = "#000";
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
+    if (previousContent) {
+      ctx.drawImage(previousContent, 0, 0, previousContent.width, previousContent.height, 0, 0, rect.width, rect.height);
+    }
   }, []);
+
+  useEffect(() => {
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
+    return () => {
+      window.removeEventListener("resize", resizeCanvas);
+      window.removeEventListener("orientationchange", resizeCanvas);
+    };
+  }, [resizeCanvas]);
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const coords = getCoords(e, canvasRef.current!);
@@ -107,6 +143,11 @@ export function AssinaturaCanvas({ onConfirm, disabled }: AssinaturaCanvasProps)
   };
 
   const handleTouchEnd = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    endDrawing();
+  };
+
+  const handleTouchCancel = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     endDrawing();
   };
@@ -144,15 +185,16 @@ export function AssinaturaCanvas({ onConfirm, disabled }: AssinaturaCanvasProps)
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchCancel}
         />
       </div>
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={clear} disabled={disabled}>
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" variant="outline" className="min-h-10" onClick={clear} disabled={disabled}>
           Limpar
         </Button>
         <Button
           type="button"
-          size="sm"
+          className="min-h-10"
           onClick={confirm}
           disabled={disabled || isEmpty}
         >

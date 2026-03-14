@@ -35,10 +35,9 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
         </div>
       </div>
 
-      {/* Barra de navegação */}
       <div className="px-4 lg:px-6 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="grid grid-cols-[auto_1fr_auto] items-center gap-2">
+          <div className="flex items-center">
             <Button
               variant="ghost"
               size="icon"
@@ -49,7 +48,7 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
             </Button>
           </div>
 
-          <div className="flex lg:hidden absolute left-1/2 transform -translate-x-1/2">
+          <div className="flex justify-center lg:hidden">
             <div className="w-10 h-10 relative">
               <Image
                 src={logoUrl}
@@ -62,7 +61,7 @@ export function Header({ onMenuClick, userEmail }: HeaderProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-end gap-2 sm:gap-4">
             {userEmail && (
               <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />

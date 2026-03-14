@@ -109,6 +109,31 @@ export function ContratosList() {
     }
   };
 
+  const handleCopiarLink = async () => {
+    if (!linkDialog.url) return;
+    try {
+      if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(linkDialog.url);
+      } else {
+        const textArea = document.createElement("textarea");
+        textArea.value = linkDialog.url;
+        textArea.setAttribute("readonly", "");
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const copied = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        if (!copied) throw new Error("Não foi possível copiar o link.");
+      }
+      alert("Link copiado!");
+    } catch (e) {
+      console.error(e);
+      alert("Não foi possível copiar automaticamente. Selecione e copie manualmente.");
+    }
+  };
+
   useEffect(() => {
     loadContratos();
   }, [empresaId]);
@@ -341,8 +366,8 @@ export function ContratosList() {
               key={contrato.id}
               className={`hover:shadow-md transition-shadow ${contrato.status === "cancelado" ? "opacity-60" : ""}`}
             >
-              <CardContent className="p-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <CardContent className="p-4 sm:p-6">
+                <div className="flex min-w-0 flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-start gap-3">
                       <FileText className="w-5 h-5 text-primary mt-1 flex-shrink-0" />
@@ -390,12 +415,13 @@ export function ContratosList() {
                     </div>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex w-full flex-col gap-2 md:w-auto md:min-w-[220px]">
                     {contrato.status !== "cancelado" && !contrato.assinado_at && (
                       <>
                         <Button
                           variant="outline"
                           size="sm"
+                          className="w-full justify-center md:w-auto"
                           onClick={() => handleEnviarParaCliente(contrato)}
                           disabled={linkLoading}
                         >
@@ -405,6 +431,7 @@ export function ContratosList() {
                         <Button
                           variant="outline"
                           size="sm"
+                          className="w-full justify-center md:w-auto"
                           onClick={() => setContratoParaAssinar(contrato)}
                         >
                           <PenLine className="w-4 h-4 mr-2" />
@@ -416,7 +443,7 @@ export function ContratosList() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="inline-flex h-9 items-center justify-center gap-2"
+                        className="inline-flex h-9 w-full items-center justify-center gap-2 md:w-auto"
                         onClick={async () => {
                           const res = await getSignedUrlForContratoPdf(contrato.id);
                           if (res.success) window.open(res.url, "_blank", "noopener,noreferrer");
@@ -430,20 +457,21 @@ export function ContratosList() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="w-full justify-center md:w-auto"
                       onClick={() => regeneratePDF(contrato)}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Baixar PDF
                     </Button>
-                    <Link href={`/dashboard/festas/${contrato.festa.id}`}>
-                      <Button variant="outline" size="sm">
+                    <Link href={`/dashboard/festas/${contrato.festa.id}`} className="w-full md:w-auto">
+                      <Button variant="outline" size="sm" className="w-full justify-center md:w-auto">
                         Ver Festa
                       </Button>
                     </Link>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      className="w-full justify-center text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 md:w-auto"
                       onClick={() => setContratoParaExcluir(contrato)}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
@@ -514,9 +542,7 @@ export function ContratosList() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => {
-                if (linkDialog.url) navigator.clipboard.writeText(linkDialog.url);
-              }}
+              onClick={handleCopiarLink}
             >
               Copiar link
             </Button>

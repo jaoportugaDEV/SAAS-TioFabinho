@@ -33,11 +33,11 @@ function ThemeFromEmpresa({
   } as React.CSSProperties;
 
   return (
-    <div className="min-h-screen bg-gray-50" style={style}>
+    <div className="min-h-screen bg-gray-50 overflow-x-clip" style={style}>
       <Sidebar open={sidebarOpen} onClose={onCloseSidebar} />
-      <div className="lg:pl-64">
+      <div className="min-w-0 lg:pl-64">
         <Header onMenuClick={onMenuClick} userEmail={userEmail} />
-        <main className="p-3 sm:p-4 lg:p-6 max-w-full overflow-x-hidden">{children}</main>
+        <main className="w-full min-w-0 p-3 sm:p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

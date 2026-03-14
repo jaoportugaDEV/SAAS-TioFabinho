@@ -108,11 +108,11 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
       <aside
         className={cn(
-          "fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transition-transform duration-300 lg:translate-x-0",
+          "fixed top-0 left-0 z-50 h-full w-[85vw] max-w-64 bg-white border-r border-gray-200 transition-transform duration-300 lg:w-64 lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 relative">
               <Image
@@ -137,8 +137,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="p-4 space-y-1">
+        <nav className="h-[calc(100%-88px)] overflow-y-auto p-4 space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href || pathname?.startsWith(item.href + "/");
